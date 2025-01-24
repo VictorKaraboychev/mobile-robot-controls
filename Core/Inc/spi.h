@@ -30,6 +30,8 @@ extern "C" {
 
 /* USER CODE BEGIN Includes */
 
+#include "cmsis_os.h"
+
 /* USER CODE END Includes */
 
 extern SPI_HandleTypeDef hspi1;
@@ -38,12 +40,18 @@ extern SPI_HandleTypeDef hspi4;
 
 /* USER CODE BEGIN Private defines */
 
+#define READ_MASK 0x80
+#define WRITE_MASK 0x7F
+
 /* USER CODE END Private defines */
 
 void MX_SPI1_Init(void);
 void MX_SPI4_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+
+HAL_StatusTypeDef SPI_Read_Register(SPI_HandleTypeDef *hspi, osMutexId_t *mspi, GPIO_TypeDef *csPort, uint16_t csPin, uint8_t regAddr, uint8_t *pData, uint16_t size);
+HAL_StatusTypeDef SPI_Write_Register(SPI_HandleTypeDef *hspi, osMutexId_t *mspi, GPIO_TypeDef *csPort, uint16_t csPin, uint8_t regAddr, const uint8_t *pData, uint16_t size);
 
 /* USER CODE END Prototypes */
 

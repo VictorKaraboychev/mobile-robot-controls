@@ -232,4 +232,73 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* spiHandle)
 
 /* USER CODE BEGIN 1 */
 
+HAL_StatusTypeDef SPI_Read_Register(SPI_HandleTypeDef *hspi, osMutexId_t *mspi, GPIO_TypeDef *csPort, uint16_t csPin, uint8_t regAddr, uint8_t *pData, uint16_t size)
+{
+	// Acquire the SPI mutex
+	osMutexAcquire(*mspi, osWaitForever);
+
+	uint8_t buffer[size + 1];
+
+	// The register address needs to be OR-ed with the READ_MASK to set the MSB (read command)
+	buffer[0] = regAddr | READ_MASK;
+
+	// Initiate the SPI transmission
+	HAL_GPIO_WritePin(csPort, csPin, GPIO_PIN_RESET);
+	uint8_t status = HAL_SPI_TransmitReceive(hspi, buffer, buffer, size + 1, HAL_MAX_DELAY);
+	HAL_GPIO_WritePin(csPort, csPin, GPIO_PIN_SET);
+
+	// Check if the transmission was successful
+	if (status != HAL_OK)
+	{
+		// Release the SPI mutex
+		osMutexRelease(*mspi);
+
+		return HAL_ERROR;
+	}
+
+	// Store the received data in pData
+	for (int i = 0; i < size; i++)
+	{
+		pData[i] = buffer[i + 1]; // Skip the first byte (dummy byte)
+	}
+
+	// Release the SPI mutex
+	osMutexRelease(*mspi);
+
+	return HAL_OK;
+}
+
+HAL_StatusTypeDef SPI_Write_Register(SPI_HandleTypeDef *hspi, osMutexId_t *mspi, GPIO_TypeDef *csPort, uint16_t csPin, uint8_t regAddr, const uint8_t *pData, uint16_t size)
+{
+	// Acquire the SPI mutex
+	osMutexAcquire(*mspi, osWaitForever);
+
+	uint8_t buffer[size + 1];
+
+	// The register address needs to be OR-ed with the WRITE_MASK to indicate a write operation
+	buffer[0] = regAddr & WRITE_MASK;
+
+	// Copy the data to be written into the txBuffer
+	for (int i = 0; i < size; i++)
+	{
+		buffer[i + 1] = pData[i];
+	}
+
+	// Initiate the SPI transmission
+	HAL_GPIO_WritePin(csPort, csPin, GPIO_PIN_RESET);
+	uint8_t status = HAL_SPI_Transmit(hspi, buffer, size + 1, HAL_MAX_DELAY);
+	HAL_GPIO_WritePin(csPort, csPin, GPIO_PIN_SET);
+
+	// Release the SPI mutex
+	osMutexRelease(*mspi);
+
+	// Check if the transmission was successful
+	if (status != HAL_OK)
+	{
+		return HAL_ERROR;
+	}
+
+	return HAL_OK;
+}
+
 /* USER CODE END 1 */
