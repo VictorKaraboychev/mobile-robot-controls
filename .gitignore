@@ -5,6 +5,7 @@
 build/*
 debug/*
 *.make
+*.stm32env
 
 ### Eclipse ###
 .metadata
