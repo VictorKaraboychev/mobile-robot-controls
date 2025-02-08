@@ -29,6 +29,8 @@
 #include "tim.h"
 #include "spi.h"
 #include "i2c.h"
+#include "sdmmc.h"
+#include "fatfs.h"
 #include <stdio.h>
 #include <lis2mdl.h>
 #include <lsm6dso.h>
@@ -455,27 +457,13 @@ void StartMagTask(void *argument)
 
 // Encoders
 
-#define AS5600_ADDR 0x36
-
 void StartEncodersTask(void *argument)
 {
-  uint8_t data[2] = {0};
-
+ 
   while (1)
   {
-    HAL_StatusTypeDef status = I2C_Read_Register(&hi2c1, &i2c1MutexHandle, 0x77, 0x0C, data, 2);
 
-    if (status != HAL_OK)
-    {
-      printf("AS5600: Error\n");
-
-      osDelay(50);
-      continue;
-    }
-
-    printf("AS5600: %d\n", (data[0] << 8) | data[1]);
-
-    osDelay(50);
+    osDelay(100);
   }
 }
 

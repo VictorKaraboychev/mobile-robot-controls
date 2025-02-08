@@ -8,7 +8,7 @@
 # The project name
 target: mobile-robot
 # Can be C or C++
-language: C
+language: C++
 
 optimization: Og
 
@@ -38,10 +38,7 @@ cFlags:
   - -fdata-sections
   - -ffunction-sections
 
-cxxFlags: 
-  - -fno-rtti
-  - -fno-exceptions
-
+cxxFlags: []
 assemblyFlags: 
   - -Wall
   - -fdata-sections
@@ -49,7 +46,7 @@ assemblyFlags:
 
 linkerFlags: 
   - -Wl,--print-memory-usage
-  - -Wl,-u _printf_float # allows you to print floats using printf
+  - -Wl,-u _printf_float
   - -Wl,-u _scanf_float
 
 

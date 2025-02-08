@@ -79,6 +79,8 @@ void Error_Handler(void);
 #define GPIO_PD10_GPIO_Port GPIOD
 #define GPIO_PD11_Pin GPIO_PIN_11
 #define GPIO_PD11_GPIO_Port GPIOD
+#define DETECT_SDIO_Pin GPIO_PIN_15
+#define DETECT_SDIO_GPIO_Port GPIOA
 #define BAR_DDRY_Pin GPIO_PIN_0
 #define BAR_DDRY_GPIO_Port GPIOD
 #define BAR_CS_Pin GPIO_PIN_1

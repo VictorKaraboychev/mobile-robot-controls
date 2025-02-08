@@ -1,0 +1,37 @@
+#ifndef __EXTENDED_KALMAN_FILTER_H__
+#define __EXTENDED_KALMAN_FILTER_H__
+
+#include "utility/vector.h"
+#include "utility/matrix.h"
+
+class ExtendedKalmanFilter
+{
+public:
+	ExtendedKalmanFilter();
+	ExtendedKalmanFilter(Vector (*f)(const Vector &x, const Vector &u), Matrix (*F)(const Vector &x, const Vector &u), Vector (*h)(const Vector &x), Matrix (*H)(const Vector &x), const Matrix &Q, const Matrix &R);
+	~ExtendedKalmanFilter();
+
+	void initialize(const Vector &x, const Matrix &P);
+	void predict(const Vector &u);
+	void update(const Vector &z, int8_t i_start = 0, int8_t i_end = -1);
+
+	Vector getState() const;
+
+private:
+	uint8_t _state_size;	   // State size
+	uint8_t _measurement_size; // Measurement size
+
+	Vector (*_f)(const Vector &x, const Vector &u); // State transition function
+	Matrix (*_F)(const Vector &x, const Vector &u); // State transition Jacobian
+
+	Vector (*_h)(const Vector &x); // Measurement function
+	Matrix (*_H)(const Vector &x); // Measurement Jacobian
+
+	Matrix _Q; // Process noise covariance
+	Matrix _R; // Measurement noise covariance
+
+	Vector _x; // State estimate
+	Matrix _P; // Estimate covariance
+};
+
+#endif // __EXTENDED_KALMAN_FILTER_H__
