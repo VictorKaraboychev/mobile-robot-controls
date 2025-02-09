@@ -45,16 +45,17 @@ Matrix F(const Vector &x, const Vector &u)
 }
 
 // Process noise covariance
-Matrix Q = Matrix{
-	{0.01f, 0, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0.01f, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0.01f, 0, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0.01f, 0, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0.01f, 0, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0.01f, 0, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0.01f, 0, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0.01f, 0},
-	{0, 0, 0, 0, 0, 0, 0, 0, 0.01f}};
+Matrix Q = Matrix::Diagonal({
+	1.0e-3f, // x
+	1.0e-3f, // y
+	5.0e-4f, // θ
+	1.0e-4f, // v_x
+	1.0e-4f, // v_y
+	5.0e-5f, // ω
+	1.0e-5f, // a_x
+	1.0e-5f, // a_y
+	5.0e-6f	 // α
+});
 
 // ---IMU (accelerometer and gyroscope)---
 
@@ -91,10 +92,10 @@ Matrix H_imu(const Vector &x)
 }
 
 // Measurement noise covariance
-Matrix R_imu = Matrix{
-	{0.01f, 0, 0},
-	{0, 0.01f, 0},
-	{0, 0, 0.01f}};
+
+// acc_noise_density = 75 μg/√Hz (0.00073575 m/s^2/√Hz) ^ 2 / 1000 Hz ()
+// gyro_noise_density = 0.0038 °/s/√Hz (0.000066 rad/s/√Hz) ^ 2 / 1000 Hz ()
+Matrix R_imu = Matrix::Diagonal({7.5e-4f, 7.5e-4f, 5.0e-5f});
 
 // ---Magnetometer---
 
@@ -117,8 +118,7 @@ Matrix H_mag(const Vector &x)
 }
 
 // Measurement noise covariance
-Matrix R_mag = Matrix{
-	{0.01f}};
+Matrix R_mag = Matrix::Diagonal({4.0e-4f});
 
 // ---Encoders---
 
@@ -150,9 +150,7 @@ Matrix H_enc(const Vector &x)
 }
 
 // Measurement noise covariance
-Matrix R_enc = Matrix{
-	{0.01f, 0},
-	{0, 0.01f}};
+Matrix R_enc = Matrix::Diagonal({1.0e-4f, 2.5e-5f});
 
 void StartFusionTask(void *argument)
 {
@@ -180,7 +178,7 @@ void StartFusionTask(void *argument)
 		state.velocity = ekf.getState().getSubVector(3, 4);
 		state.angular_velocity = ekf.getState()[5];
 		state.acceleration = ekf.getState().getSubVector(6, 7);
-		state.angular_acceleration = ekf.getState()[8];	
+		state.angular_acceleration = ekf.getState()[8];
 
 		osDelay(10);
 	}

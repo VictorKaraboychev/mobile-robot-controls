@@ -747,3 +747,29 @@ Matrix Matrix::Rotation(const float angle)
 
 	return result;
 }
+
+Matrix Matrix::Diagonal(const Vector &v)
+{
+	Matrix result(v.size(), v.size());
+
+	for (uint8_t i = 0; i < v.size(); i++)
+	{
+		result._data[i][i] = v[i];
+	}
+
+	return result;
+}
+
+Matrix Matrix::Diagonal(const std::initializer_list<float> data)
+{
+	Matrix result(data.size(), data.size());
+
+	uint8_t i = 0;
+	for (const auto &value : data)
+	{
+		result._data[i][i] = value;
+		++i;
+	}
+
+	return result;
+}
