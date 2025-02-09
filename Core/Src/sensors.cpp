@@ -188,7 +188,6 @@ void StartMagTask(void *argument)
 
 	// Calibrate the magnetometer
 
-
 	while (1)
 	{
 		// printf("LIS2MDL ID: 0x%02X\n", id);
@@ -229,11 +228,20 @@ void StartMagTask(void *argument)
 
 void StartEncodersTask(void *argument)
 {
-
 	bool status = false;
+
+	Encoder *left = &encoders_data.left;
+	Encoder *right = &encoders_data.right;
+
+	uint64_t last_time = HAL_GetTick();
 
 	while (1)
 	{
+		float delta_time = (HAL_GetTick() - last_time) / 1000.0f;
+		last_time = HAL_GetTick();
+
+		// Read the encoder data
+		// status = (Read_Encoder(&left->pulses, &right->pulses) == HAL_OK); // TODO: Implement the Read_Encoder function
 
 		if (!status)
 		{
@@ -242,6 +250,39 @@ void StartEncodersTask(void *argument)
 			osDelay(100);
 			continue;
 		}
+
+		// Compute the delta pulses and handle discontinuity
+		int64_t delta_left = left->pulses - left->last_pulses;
+		int64_t delta_right = right->pulses - right->last_pulses;
+
+		// If the left encoder has made a full revolution in the positive direction (CW)
+		if (delta_left > PULSE_PER_REVOLUTION / 2)
+		{
+			delta_left -= 4096;
+		}
+		// If the left encoder has made a full revolution in the negative direction (CCW)
+		else if (delta_left < -PULSE_PER_REVOLUTION / 2)
+		{
+			delta_left += 4096;
+		}
+
+		// If the right encoder has made a full revolution in the positive direction (CW)
+		if (delta_right > PULSE_PER_REVOLUTION / 2)
+		{
+			delta_right -= 4096;
+		}
+		// If the right encoder has made a full revolution in the negative direction (CCW)
+		else if (delta_right < -PULSE_PER_REVOLUTION / 2)
+		{
+			delta_right += 4096;
+		}
+
+		// Compute the encoder velocity
+		float left_velocity = (left->pulses - left->last_pulses) * (DISTANCE_PER_PULSE / delta_time);
+		float right_velocity = (right->pulses - right->last_pulses) * (DISTANCE_PER_PULSE / delta_time);
+
+		encoders_data.velocity = (left_velocity + right_velocity) / 2.0f;
+		encoders_data.angular_velocity = (right_velocity - left_velocity) / WHEEL_DISTANCE;
 
 		encoders_data.active = true;
 
