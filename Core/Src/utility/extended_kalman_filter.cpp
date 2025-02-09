@@ -71,6 +71,12 @@ void ExtendedKalmanFilter::update(const Vector &z)
 	this->_P = (Matrix::Identity(this->_P.rows()) - K * H) * this->_P;
 }
 
+void ExtendedKalmanFilter::asyncUpdate(const Vector &z, Vector (*h)(const Vector &x), Matrix (*H)(const Vector &x), const Matrix &R)
+{
+	this->setMeasurement(h, H, R);
+	this->update(z);
+}
+
 void ExtendedKalmanFilter::setMeasurement(Vector (*h)(const Vector &x), Matrix (*H)(const Vector &x), const Matrix &R)
 {
 	this->_h = h;

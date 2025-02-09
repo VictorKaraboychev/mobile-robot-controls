@@ -16,7 +16,12 @@ public:
 
 	void initialize(const Vector &x, const Matrix &P);
 	void predict(const Vector &u);
+
+	// Synchronous update
 	void update(const Vector &z);
+
+	// Asynchronous update, updates measurement function and Jacobian then updates the state estimate
+	void asyncUpdate(const Vector &z, Vector (*h)(const Vector &x), Matrix (*H)(const Vector &x), const Matrix &R);
 
 	void setMeasurement(Vector (*h)(const Vector &x), Matrix (*H)(const Vector &x), const Matrix &R);
 
