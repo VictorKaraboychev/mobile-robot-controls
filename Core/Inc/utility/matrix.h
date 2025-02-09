@@ -60,10 +60,11 @@ public:
 	void print() const;
 
 	static Matrix Identity(uint8_t size);
-	static Matrix Quaternion(const float x, const float y, const float z, const float w);
-	static Matrix Rotation(const float angle);
 	static Matrix Diagonal(const Vector &v);
 	static Matrix Diagonal(const std::initializer_list<float> data);
+	static Matrix Quaternion(const float x, const float y, const float z, const float w);
+	static Matrix Rotation2D(const float angle);
+
 private:
 	uint8_t _rows;
 	uint8_t _cols;

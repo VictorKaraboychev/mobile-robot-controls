@@ -716,38 +716,6 @@ Matrix Matrix::Identity(uint8_t size)
 	return result;
 }
 
-Matrix Matrix::Quaternion(const float x, const float y, const float z, const float w)
-{
-	Matrix result(3, 3);
-
-	result._data[0][0] = 1 - 2 * y * y - 2 * z * z;
-	result._data[0][1] = 2 * x * y - 2 * z * w;
-	result._data[0][2] = 2 * x * z + 2 * y * w;
-
-	result._data[1][0] = 2 * x * y + 2 * z * w;
-	result._data[1][1] = 1 - 2 * x * x - 2 * z * z;
-	result._data[1][2] = 2 * y * z - 2 * x * w;
-
-	result._data[2][0] = 2 * x * z - 2 * y * w;
-	result._data[2][1] = 2 * y * z + 2 * x * w;
-	result._data[2][2] = 1 - 2 * x * x - 2 * y * y;
-
-	return result;
-}
-
-Matrix Matrix::Rotation(const float angle)
-{
-	Matrix result(2, 2);
-
-	result._data[0][0] = cos(angle);
-	result._data[0][1] = -sin(angle);
-
-	result._data[1][0] = sin(angle);
-	result._data[1][1] = cos(angle);
-
-	return result;
-}
-
 Matrix Matrix::Diagonal(const Vector &v)
 {
 	Matrix result(v.size(), v.size());
@@ -770,6 +738,38 @@ Matrix Matrix::Diagonal(const std::initializer_list<float> data)
 		result._data[i][i] = value;
 		++i;
 	}
+
+	return result;
+}
+
+Matrix Matrix::Quaternion(const float x, const float y, const float z, const float w)
+{
+	Matrix result(3, 3);
+
+	result._data[0][0] = 1 - 2 * y * y - 2 * z * z;
+	result._data[0][1] = 2 * x * y - 2 * z * w;
+	result._data[0][2] = 2 * x * z + 2 * y * w;
+
+	result._data[1][0] = 2 * x * y + 2 * z * w;
+	result._data[1][1] = 1 - 2 * x * x - 2 * z * z;
+	result._data[1][2] = 2 * y * z - 2 * x * w;
+
+	result._data[2][0] = 2 * x * z - 2 * y * w;
+	result._data[2][1] = 2 * y * z + 2 * x * w;
+	result._data[2][2] = 1 - 2 * x * x - 2 * y * y;
+
+	return result;
+}
+
+Matrix Matrix::Rotation2D(const float angle)
+{
+	Matrix result(2, 2);
+
+	result._data[0][0] = cos(angle);
+	result._data[0][1] = -sin(angle);
+
+	result._data[1][0] = sin(angle);
+	result._data[1][1] = cos(angle);
 
 	return result;
 }

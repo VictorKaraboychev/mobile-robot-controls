@@ -63,11 +63,13 @@ Matrix Q = Matrix::Diagonal({
 Vector h_imu(const Vector &x)
 {
 	float theta = x[2];
+	float s = sin(theta);
+	float c = cos(theta);
 
 	return Vector{
-		x[6] * cos(theta) - x[7] * sin(theta), // a_x_body = a_x * cos(θ) - a_y * sin(θ)
-		x[6] * sin(theta) + x[7] * cos(theta), // a_y_body = a_x * sin(θ) + a_y * cos(θ)
-		x[5]								   // ω
+		x[6] * c - x[7] * s, // a_x_body = a_x * cos(θ) - a_y * sin(θ)
+		x[6] * s + x[7] * c, // a_y_body = a_x * sin(θ) + a_y * cos(θ)
+		x[5]				 // ω
 	};
 }
 
@@ -75,16 +77,18 @@ Vector h_imu(const Vector &x)
 Matrix H_imu(const Vector &x)
 {
 	float theta = x[2];
+	float s = sin(theta);
+	float c = cos(theta);
 
 	Matrix H(3, 9);
 
-	H(0, 6) = cos(theta);							  // ∂a_x_body/∂a_x
-	H(0, 7) = -sin(theta);							  // ∂a_x_body/∂a_y
-	H(0, 2) = -x[6] * sin(theta) - x[7] * cos(theta); // ∂a_x_body/∂θ
+	H(0, 6) = c;					// ∂a_x_body/∂a_x
+	H(0, 7) = -s;					// ∂a_x_body/∂a_y
+	H(0, 2) = -x[6] * s - x[7] * c; // ∂a_x_body/∂θ
 
-	H(1, 6) = sin(theta);							 // ∂a_y_body/∂a_x
-	H(1, 7) = cos(theta);							 // ∂a_y_body/∂a_y
-	H(1, 2) = x[6] * cos(theta) - x[7] * sin(theta); // ∂a_y_body/∂θ
+	H(1, 6) = s;				   // ∂a_y_body/∂a_x
+	H(1, 7) = c;				   // ∂a_y_body/∂a_y
+	H(1, 2) = x[6] * c - x[7] * s; // ∂a_y_body/∂θ
 
 	H(2, 5) = 1; // ∂ω/∂w
 
@@ -93,8 +97,8 @@ Matrix H_imu(const Vector &x)
 
 // Measurement noise covariance
 
-// acc_noise_density = 75 μg/√Hz (0.00073575 m/s^2/√Hz) ^ 2 / 1000 Hz ()
-// gyro_noise_density = 0.0038 °/s/√Hz (0.000066 rad/s/√Hz) ^ 2 / 1000 Hz ()
+// acc_noise_density = 75 μg/√Hz (0.00073575 m/s^2/√Hz) ^ 2 / 1000 Hz
+// gyro_noise_density = 0.0038 °/s/√Hz (0.000066 rad/s/√Hz) ^ 2 / 1000 Hz
 Matrix R_imu = Matrix::Diagonal({7.5e-4f, 7.5e-4f, 5.0e-5f});
 
 // ---Magnetometer---
@@ -126,10 +130,12 @@ Matrix R_mag = Matrix::Diagonal({4.0e-4f});
 Vector h_enc(const Vector &x)
 {
 	float theta = x[2];
+	float s = sin(theta);
+	float c = cos(theta);
 
 	return Vector{
-		x[3] * cos(theta) - x[4] * sin(theta), // v_fwd = v_x * cos(θ) - v_y * sin(θ)
-		x[5]								   // ω = ω
+		x[3] * c - x[4] * s, // v_fwd = v_x * cos(θ) - v_y * sin(θ)
+		x[5]				 // ω = ω
 	};
 }
 
@@ -137,12 +143,14 @@ Vector h_enc(const Vector &x)
 Matrix H_enc(const Vector &x)
 {
 	float theta = x[2];
+	float s = sin(theta);
+	float c = cos(theta);
 
 	Matrix H(2, 9);
 
-	H(0, 3) = cos(theta);							  // v_fwd/∂v_x
-	H(0, 4) = -sin(theta);							  // v_fwd/∂v_y
-	H(0, 2) = -x[3] * sin(theta) - x[4] * cos(theta); // v_fwd/∂θ
+	H(0, 3) = c;					// v_fwd/∂v_x
+	H(0, 4) = -s;					// v_fwd/∂v_y
+	H(0, 2) = -x[3] * s - x[4] * c; // v_fwd/∂θ
 
 	H(1, 5) = 1; // ∂ω/∂ω
 
@@ -173,12 +181,14 @@ void StartFusionTask(void *argument)
 		ekf.predict(Vector{delta_time});
 
 		// Update the state from the state vector
-		state.position = ekf.getState().getSubVector(0, 1);
-		state.orientation = ekf.getState()[2];
-		state.velocity = ekf.getState().getSubVector(3, 4);
-		state.angular_velocity = ekf.getState()[5];
-		state.acceleration = ekf.getState().getSubVector(6, 7);
-		state.angular_acceleration = ekf.getState()[8];
+		Vector ekfState = ekf.getState();
+
+		state.position = ekfState.getSubVector(0, 1);
+		state.orientation = ekfState[2];
+		state.velocity = ekfState.getSubVector(3, 4);
+		state.angular_velocity = ekfState[5];
+		state.acceleration = ekfState.getSubVector(6, 7);
+		state.angular_acceleration = ekfState[8];
 
 		osDelay(10);
 	}
