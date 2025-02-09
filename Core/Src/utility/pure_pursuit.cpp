@@ -1,10 +1,10 @@
 #include <cmath>
-#include "control.h"
 #include "sensors.h"
+#include "control.h"
 #include "vector.h"
 
 float calculateCurvatureRadius(const State& robot, const Vector& target) {
-    // Calculate the relative position of the target point
+    // Calculate the relative position to the target point
     float dx = *target.x - *robot.position.x;
     float dy = *target.y - *robot.position.y;
 
