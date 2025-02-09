@@ -27,13 +27,7 @@
 /* USER CODE BEGIN Includes */
 
 #include "tim.h"
-#include "spi.h"
-#include "i2c.h"
-#include "sdmmc.h"
-#include "fatfs.h"
 #include <stdio.h>
-#include <lis2mdl.h>
-#include <lsm6dso.h>
 
 /* USER CODE END Includes */
 
@@ -84,6 +78,13 @@ const osThreadAttr_t encodersTask_attributes = {
     .stack_size = 512 * 4,
     .priority = (osPriority_t)osPriorityNormal,
 };
+/* Definitions for fusionTask */
+osThreadId_t fusionTaskHandle;
+const osThreadAttr_t fusionTask_attributes = {
+    .name = "fusionTask",
+    .stack_size = 1024 * 4,
+    .priority = (osPriority_t)osPriorityNormal,
+};
 /* Definitions for spi1Mutex */
 osMutexId_t spi1MutexHandle;
 const osMutexAttr_t spi1Mutex_attributes = {
@@ -114,6 +115,7 @@ void StartDefaultTask(void *argument);
 extern void StartImuTask(void *argument);
 extern void StartMagTask(void *argument);
 extern void StartEncodersTask(void *argument);
+extern void StartFusionTask(void *argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -173,6 +175,9 @@ void MX_FREERTOS_Init(void)
   /* creation of encodersTask */
   encodersTaskHandle = osThreadNew(StartEncodersTask, NULL, &encodersTask_attributes);
 
+  /* creation of fusionTask */
+  fusionTaskHandle = osThreadNew(StartFusionTask, NULL, &fusionTask_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -191,6 +196,8 @@ void MX_FREERTOS_Init(void)
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void *argument)
 {
+  /* init code for USB_DEVICE */
+//   MX_USB_DEVICE_Init();
   /* init code for USB_DEVICE */
   // MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartDefaultTask */

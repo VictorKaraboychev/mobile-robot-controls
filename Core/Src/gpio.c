@@ -58,11 +58,13 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOB, GPIO_PB12_Pin|GPIO_PB13_Pin|GPIO_PB14_Pin|GPIO_PB15_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOD, GPIO_PD8_Pin|GPIO_PD9_Pin|GPIO_PD10_Pin|GPIO_PD11_Pin
-                          |BAR_CS_Pin|IMU_CS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, GPIO_PD8_Pin|GPIO_PD9_Pin|GPIO_PD10_Pin|GPIO_PD11_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(MAG_CS_GPIO_Port, MAG_CS_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOD, BAR_CS_Pin|IMU_CS_Pin, GPIO_PIN_SET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(MAG_CS_GPIO_Port, MAG_CS_Pin, GPIO_PIN_SET);
 
   /*Configure GPIO pins : PBPin PBPin PBPin PBPin */
   GPIO_InitStruct.Pin = GPIO_PB12_Pin|GPIO_PB13_Pin|GPIO_PB14_Pin|GPIO_PB15_Pin;

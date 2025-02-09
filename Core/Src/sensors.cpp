@@ -4,6 +4,7 @@ extern osMutexId_t spi1MutexHandle;
 
 // LSM6DSO
 LSM6DSO_Object_t lsm6dso;
+IMUData imu_data;
 
 int32_t Write_LSM6DSO(void *handle, uint8_t reg, uint8_t *data, uint16_t len)
 {
@@ -37,6 +38,7 @@ void StartImuTask(void *argument)
 	do
 	{
 		LSM6DSO_ReadID(&lsm6dso, &id);
+		printf("IMU ID: 0x%02X\n", id);
 		osDelay(100);
 	} while (id != LSM6DSO_ID);
 
@@ -86,25 +88,15 @@ void StartImuTask(void *argument)
 
 	while (1)
 	{
-		// printf("LSM6DSO ID: 0x%02X\n", id);
-
-		// LSM6DSO_ACC_GetAxes(&lsm6dso, &acc);
-		// LSM6DSO_GYRO_GetAxes(&lsm6dso, &gyro);
-
-		// printf("Acceleration: %.2f %.2f %.2f Gyroscope: %.4f %.4f %.4f\n",
-		//        (float)(acc.x * acc_scale),
-		//        (float)(acc.y * acc_scale),
-		//        (float)(acc.z * acc_scale),
-		//        (float)(gyro.x * gyro_scale),
-		//        (float)(gyro.y * gyro_scale),
-		//        (float)(gyro.z * gyro_scale));
-
+		// Read the IMU data
 		status = (LSM6DSO_ACC_GetAxes(&lsm6dso, &acc) == LSM6DSO_OK) && (LSM6DSO_GYRO_GetAxes(&lsm6dso, &gyro) == LSM6DSO_OK);
 
 		// Check if the IMU is active
 		if (!status || id != LSM6DSO_ID)
 		{
 			imu_data.active = false;
+
+			printf("IMU not active, ID: 0x%02X\n", id);
 
 			osDelay(100);
 			continue;
@@ -116,12 +108,10 @@ void StartImuTask(void *argument)
 
 		imu_data.active = true;
 
-		// ComputeStatisticsRecursive(&stats, 1000, *imu_data.angular_velocity.z);
-
 		// Print biases
 		// printf("ID: 0x%02X Acceleration: %.4f %.4f %.4f Gyroscope: %.4f %.4f %.4f\n", id, *acc_bias.x, *acc_bias.y, *acc_bias.z, *gyro_bias.x, *gyro_bias.y, *gyro_bias.z);
 
-		// printf("ID: 0x%02X Acceleration: %.2f %.2f %.2f Gyroscope: %.4f %.4f %.4f\n", id, *imu_data.acceleration.x, *imu_data.acceleration.y, *imu_data.acceleration.z, *imu_data.angular_velocity.x, *imu_data.angular_velocity.y, *imu_data.angular_velocity.z);
+		printf("ID: 0x%02X Acceleration: %.2f %.2f %.2f Gyroscope: %.4f %.4f %.4f\n", id, *imu_data.acceleration.x, *imu_data.acceleration.y, *imu_data.acceleration.z, *imu_data.angular_velocity.x, *imu_data.angular_velocity.y, *imu_data.angular_velocity.z);
 
 		osDelay(100);
 	}
@@ -130,6 +120,7 @@ void StartImuTask(void *argument)
 // LIS2MDL
 
 LIS2MDL_Object_t lis2mdl;
+MagData mag_data;
 
 int32_t Write_LIS2MDL(void *handle, uint8_t reg, uint8_t *data, uint16_t len)
 {
@@ -166,11 +157,13 @@ void StartMagTask(void *argument)
 	do
 	{
 		LIS2MDL_ReadID(&lis2mdl, &id);
+		printf("Magnetometer ID: 0x%02X\n", id);
 		osDelay(100);
 	} while (id != LIS2MDL_ID);
 
 	// Initialize the magnetometer
 	LIS2MDL_Init(&lis2mdl);
+	lis2mdl_spi_mode_set(&lis2mdl.Ctx, LIS2MDL_SPI_4_WIRE);
 
 	// Magnetometer configuration
 	LIS2MDL_MAG_SetOutputDataRate(&lis2mdl, 100.0f);
@@ -184,20 +177,22 @@ void StartMagTask(void *argument)
 	float mag_scale = 1.5f / 1000.0f;
 
 	LIS2MDL_Axes_t mag;
+	float roll, pitch, yaw;
 	bool status = false;
 
 	// Calibrate the magnetometer
 
 	while (1)
 	{
-		// printf("LIS2MDL ID: 0x%02X\n", id);
-
+		// Read the magnetometer data
 		status = (LIS2MDL_MAG_GetAxes(&lis2mdl, &mag) == LIS2MDL_OK);
 
 		// Check if the IMU is active
 		if (!status || id != LIS2MDL_ID)
 		{
 			imu_data.active = false;
+
+			printf("Magnetometer not active, ID: 0x%02X\n", id);
 
 			osDelay(100);
 			continue;
@@ -208,23 +203,24 @@ void StartMagTask(void *argument)
 		//        (float)(mag.y * mag_scale),
 		//        (float)(mag.z * mag_scale));
 
-		float roll, pitch, yaw;
-
+		// Compute the magnetic orientation
 		roll = atan2(mag.y, mag.z);
-		pitch = atan2(-mag.x, sqrt(mag.y * mag.y + mag.z * mag.z));
+		pitch = atan2(-mag.x, hypot(mag.y, mag.z));
 		yaw = atan2(mag.z, mag.x);
 
 		mag_data.magnetic_orientation = Vector{roll, pitch, yaw};
 
 		imu_data.active = true;
 
-		// printf("Roll: %.1f Pitch: %.1f Yaw: %.1f\n", roll * RAD_TO_DEG, pitch * RAD_TO_DEG, yaw * RAD_TO_DEG);
+		printf("ID: 0x%02X Roll: %.1f Pitch: %.1f Yaw: %.1f\n", id, roll * RAD_TO_DEG, pitch * RAD_TO_DEG, yaw * RAD_TO_DEG);
 
 		osDelay(100);
 	}
 }
 
 // Encoders
+
+EncodersData encoders_data;
 
 void StartEncodersTask(void *argument)
 {
@@ -284,8 +280,12 @@ void StartEncodersTask(void *argument)
 		encoders_data.velocity = (left_velocity + right_velocity) / 2.0f;
 		encoders_data.angular_velocity = (right_velocity - left_velocity) / WHEEL_DISTANCE;
 
+		// Store the last encoder values
+		left->last_pulses = left->pulses;
+		right->last_pulses = right->pulses;
+
 		encoders_data.active = true;
 
-		osDelay(100);
+		osDelay(10);
 	}
 }

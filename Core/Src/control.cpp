@@ -160,6 +160,9 @@ Matrix H_enc(const Vector &x)
 // Measurement noise covariance
 Matrix R_enc = Matrix::Diagonal({1.0e-4f, 2.5e-5f});
 
+ExtendedKalmanFilter ekf;
+State state;
+
 void StartFusionTask(void *argument)
 {
 	// Create the Extended Kalman Filter
