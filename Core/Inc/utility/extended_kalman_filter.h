@@ -8,12 +8,17 @@ class ExtendedKalmanFilter
 {
 public:
 	ExtendedKalmanFilter();
-	ExtendedKalmanFilter(Vector (*f)(const Vector &x, const Vector &u), Matrix (*F)(const Vector &x, const Vector &u), Vector (*h)(const Vector &x), Matrix (*H)(const Vector &x), const Matrix &Q, const Matrix &R);
+	// Asynchronous communication
+	ExtendedKalmanFilter(Vector (*f)(const Vector &x, const Vector &u), Matrix (*F)(const Vector &x, const Vector &u), const Matrix &Q);
+	// Synchronous communication
+	ExtendedKalmanFilter(Vector (*f)(const Vector &x, const Vector &u), Matrix (*F)(const Vector &x, const Vector &u), const Matrix &Q, Vector (*h)(const Vector &x), Matrix (*H)(const Vector &x), const Matrix &R);
 	~ExtendedKalmanFilter();
 
 	void initialize(const Vector &x, const Matrix &P);
 	void predict(const Vector &u);
-	void update(const Vector &z, int8_t i_start = 0, int8_t i_end = -1);
+	void update(const Vector &z);
+
+	void setMeasurement(Vector (*h)(const Vector &x), Matrix (*H)(const Vector &x), const Matrix &R);
 
 	Vector getState() const;
 
@@ -23,12 +28,11 @@ private:
 
 	Vector (*_f)(const Vector &x, const Vector &u); // State transition function
 	Matrix (*_F)(const Vector &x, const Vector &u); // State transition Jacobian
+	Matrix _Q;										// Process noise covariance
 
 	Vector (*_h)(const Vector &x); // Measurement function
 	Matrix (*_H)(const Vector &x); // Measurement Jacobian
-
-	Matrix _Q; // Process noise covariance
-	Matrix _R; // Measurement noise covariance
+	Matrix _R;					   // Measurement noise covariance
 
 	Vector _x; // State estimate
 	Matrix _P; // Estimate covariance

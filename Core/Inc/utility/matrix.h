@@ -53,13 +53,15 @@ public:
 	Vector operator*(const Vector &v) const;
 
 	Matrix transpose() const;
+	Matrix T() const;
 	Matrix inverse() const;
 	float determinant() const;
 
 	void print() const;
 
-	static Matrix identity(uint8_t size);
-	static Matrix fromQuaternion(const float x, const float y, const float z, const float w);
+	static Matrix Identity(uint8_t size);
+	static Matrix Quaternion(const float x, const float y, const float z, const float w);
+	static Matrix Rotation(const float angle);
 
 private:
 	uint8_t _rows;

@@ -455,12 +455,12 @@ void Vector::print() const
 	delete[] result;
 }
 
-Vector Vector::zero(uint8_t size)
+Vector Vector::Zero(uint8_t size)
 {
 	return Vector(size);
 }
 
-Vector Vector::one(uint8_t size)
+Vector Vector::One(uint8_t size)
 {
 	Vector result(size);
 
@@ -472,7 +472,7 @@ Vector Vector::one(uint8_t size)
 	return result;
 }
 
-Vector Vector::exp(const Vector &v)
+Vector Vector::Exp(const Vector &v)
 {
 	Vector result(v._size);
 

@@ -268,7 +268,7 @@ float &Matrix::operator()(uint8_t row, uint8_t col)
 	return this->_data[row][col];
 }
 
-Matrix& Matrix::operator=(const Matrix &m)
+Matrix &Matrix::operator=(const Matrix &m)
 {
 	if (this->_data != NULL)
 	{
@@ -524,6 +524,11 @@ Matrix Matrix::transpose() const
 	return result;
 }
 
+Matrix Matrix::T() const
+{
+	return this->transpose();
+}
+
 Matrix Matrix::inverse() const
 {
 	if (this->_rows != this->_cols)
@@ -699,7 +704,7 @@ void Matrix::print() const
 	delete[] result;
 }
 
-Matrix Matrix::identity(uint8_t size)
+Matrix Matrix::Identity(uint8_t size)
 {
 	Matrix result(size, size);
 
@@ -711,7 +716,7 @@ Matrix Matrix::identity(uint8_t size)
 	return result;
 }
 
-Matrix Matrix::fromQuaternion(const float x, const float y, const float z, const float w)
+Matrix Matrix::Quaternion(const float x, const float y, const float z, const float w)
 {
 	Matrix result(3, 3);
 
@@ -726,6 +731,19 @@ Matrix Matrix::fromQuaternion(const float x, const float y, const float z, const
 	result._data[2][0] = 2 * x * z - 2 * y * w;
 	result._data[2][1] = 2 * y * z + 2 * x * w;
 	result._data[2][2] = 1 - 2 * x * x - 2 * y * y;
+
+	return result;
+}
+
+Matrix Matrix::Rotation(const float angle)
+{
+	Matrix result(2, 2);
+
+	result._data[0][0] = cos(angle);
+	result._data[0][1] = -sin(angle);
+
+	result._data[1][0] = sin(angle);
+	result._data[1][1] = cos(angle);
 
 	return result;
 }

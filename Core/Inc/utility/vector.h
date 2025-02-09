@@ -65,10 +65,9 @@ public:
 
 	void print() const;
 
-	static Vector zero(uint8_t size);
-	static Vector one(uint8_t size);
-
-	static Vector exp(const Vector &v);
+	static Vector Zero(uint8_t size);
+	static Vector One(uint8_t size);
+	static Vector Exp(const Vector &v);
 
 private:
 	uint8_t _size;
