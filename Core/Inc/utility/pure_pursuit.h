@@ -7,7 +7,6 @@
 
 #include "control.h"
 
-float calculateCurvatureRadius(const State &robot, const Vector &target);
-float calculateSpeedRatio(float curvature_radius, float wheel_distance);
+float calculateCurvature(const State &robot, const Vector &target);
 
 #endif /* __PURE_PURSUIT_H__ */

@@ -1,6 +1,6 @@
 #include "pure_pursuit.h"
 
-float calculateCurvatureRadius(const State &robot, const Vector &target)
+float calculateCurvature(const State &robot, const Vector &target)
 {
     // Calculate the relative position to the target point
     float dx = *target.x - *robot.position.x;
@@ -12,9 +12,4 @@ float calculateCurvatureRadius(const State &robot, const Vector &target)
 
     // Calculate Curvature
     return 2.0f * sin(angle_diff) / hypot(dx, dy);
-}
-
-float calculateSpeedRatio(float curvature_radius, float wheel_distance)
-{
-    return curvature_radius / wheel_distance;
 }
