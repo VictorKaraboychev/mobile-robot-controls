@@ -161,7 +161,7 @@ Matrix H_enc(const Vector &x)
 Matrix R_enc = Matrix::Diagonal({1.0e-4f, 2.5e-5f});
 
 ExtendedKalmanFilter ekf;
-State state;
+State robot;
 
 void StartFusionTask(void *argument)
 {
@@ -186,13 +186,23 @@ void StartFusionTask(void *argument)
 		// Update the state from the state vector
 		Vector ekfState = ekf.getState();
 
-		state.position = ekfState.getSubVector(0, 1);
-		state.orientation = ekfState[2];
-		state.velocity = ekfState.getSubVector(3, 4);
-		state.angular_velocity = ekfState[5];
-		state.acceleration = ekfState.getSubVector(6, 7);
-		state.angular_acceleration = ekfState[8];
+		robot.position = ekfState.getSubVector(0, 1);
+		robot.orientation = ekfState[2];
+		robot.velocity = ekfState.getSubVector(3, 4);
+		robot.angular_velocity = ekfState[5];
+		robot.acceleration = ekfState.getSubVector(6, 7);
+		robot.angular_acceleration = ekfState[8];
 
 		osDelay(10);
+	}
+}
+
+void StartControlTask(void *argument)
+{
+	while (true)
+	{
+		// printf("Hello World!\n");
+
+		osDelay(100);
 	}
 }

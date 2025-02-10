@@ -8,6 +8,10 @@
 #include "utility/matrix.h"
 #include "extended_kalman_filter.h"
 
+#include "sensors.h"
+
+#include <stdio.h>
+
 struct State
 {
 	Vector position;			// x, y (m)
@@ -18,10 +22,11 @@ struct State
 	float angular_acceleration; // α (rad/s^2)
 };
 
-extern State state;
-
+extern State robot;
 extern ExtendedKalmanFilter ekf;
 
+void StartDebugTask(void *argument);
 void StartFusionTask(void *argument);
+void StartControlTask(void *argument);
 
 #endif /* __CONTROL_H__ */

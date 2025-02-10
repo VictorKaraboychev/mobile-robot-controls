@@ -111,7 +111,7 @@ void StartImuTask(void *argument)
 		// Print biases
 		// printf("ID: 0x%02X Acceleration: %.4f %.4f %.4f Gyroscope: %.4f %.4f %.4f\n", id, *acc_bias.x, *acc_bias.y, *acc_bias.z, *gyro_bias.x, *gyro_bias.y, *gyro_bias.z);
 
-		printf("ID: 0x%02X Acceleration: %.2f %.2f %.2f Gyroscope: %.4f %.4f %.4f\n", id, *imu_data.acceleration.x, *imu_data.acceleration.y, *imu_data.acceleration.z, *imu_data.angular_velocity.x, *imu_data.angular_velocity.y, *imu_data.angular_velocity.z);
+		// printf("ID: 0x%02X Acceleration: %.2f %.2f %.2f Gyroscope: %.4f %.4f %.4f\n", id, *imu_data.acceleration.x, *imu_data.acceleration.y, *imu_data.acceleration.z, *imu_data.angular_velocity.x, *imu_data.angular_velocity.y, *imu_data.angular_velocity.z);
 
 		osDelay(100);
 	}
@@ -210,9 +210,9 @@ void StartMagTask(void *argument)
 
 		mag_data.magnetic_orientation = Vector{roll, pitch, yaw};
 
-		imu_data.active = true;
+		mag_data.active = true;
 
-		printf("ID: 0x%02X Roll: %.1f Pitch: %.1f Yaw: %.1f\n", id, roll * RAD_TO_DEG, pitch * RAD_TO_DEG, yaw * RAD_TO_DEG);
+		// printf("ID: 0x%02X Roll: %.1f Pitch: %.1f Yaw: %.1f\n", id, roll * RAD_TO_DEG, pitch * RAD_TO_DEG, yaw * RAD_TO_DEG);
 
 		osDelay(100);
 	}

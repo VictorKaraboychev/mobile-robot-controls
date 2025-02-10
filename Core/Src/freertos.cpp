@@ -26,9 +26,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include "tim.h"
-#include <stdio.h>
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,8 +51,8 @@
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
     .name = "defaultTask",
-    .stack_size = 512 * 4,
-    .priority = (osPriority_t)osPriorityNormal,
+    .stack_size = 256 * 4,
+    .priority = (osPriority_t)osPriorityLow,
 };
 /* Definitions for imuTask */
 osThreadId_t imuTaskHandle;
@@ -85,6 +82,20 @@ const osThreadAttr_t fusionTask_attributes = {
     .stack_size = 1024 * 4,
     .priority = (osPriority_t)osPriorityNormal,
 };
+/* Definitions for debugTask */
+osThreadId_t debugTaskHandle;
+const osThreadAttr_t debugTask_attributes = {
+    .name = "debugTask",
+    .stack_size = 256 * 4,
+    .priority = (osPriority_t)osPriorityLow,
+};
+/* Definitions for controlTask */
+osThreadId_t controlTaskHandle;
+const osThreadAttr_t controlTask_attributes = {
+    .name = "controlTask",
+    .stack_size = 1024 * 4,
+    .priority = (osPriority_t)osPriorityHigh,
+};
 /* Definitions for spi1Mutex */
 osMutexId_t spi1MutexHandle;
 const osMutexAttr_t spi1Mutex_attributes = {
@@ -105,6 +116,14 @@ const osMutexAttr_t usbMutex_attributes = {
 osMutexId_t fdcanMutexHandle;
 const osMutexAttr_t fdcanMutex_attributes = {
     .name = "fdcanMutex"};
+/* Definitions for uart4Mutex */
+osMutexId_t uart4MutexHandle;
+const osMutexAttr_t uart4Mutex_attributes = {
+    .name = "uart4Mutex"};
+/* Definitions for uart7Mutex */
+osMutexId_t uart7MutexHandle;
+const osMutexAttr_t uart7Mutex_attributes = {
+    .name = "uart7Mutex"};
 
 /* Private function prototypes -----------------------------------------------*/
 /* USER CODE BEGIN FunctionPrototypes */
@@ -116,6 +135,8 @@ extern void StartImuTask(void *argument);
 extern void StartMagTask(void *argument);
 extern void StartEncodersTask(void *argument);
 extern void StartFusionTask(void *argument);
+extern void StartDebugTask(void *argument);
+extern void StartControlTask(void *argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -145,6 +166,12 @@ void MX_FREERTOS_Init(void)
 
   /* creation of fdcanMutex */
   fdcanMutexHandle = osMutexNew(&fdcanMutex_attributes);
+
+  /* creation of uart4Mutex */
+  uart4MutexHandle = osMutexNew(&uart4Mutex_attributes);
+
+  /* creation of uart7Mutex */
+  uart7MutexHandle = osMutexNew(&uart7Mutex_attributes);
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -178,6 +205,12 @@ void MX_FREERTOS_Init(void)
   /* creation of fusionTask */
   fusionTaskHandle = osThreadNew(StartFusionTask, NULL, &fusionTask_attributes);
 
+  /* creation of debugTask */
+  debugTaskHandle = osThreadNew(StartDebugTask, NULL, &debugTask_attributes);
+
+  /* creation of controlTask */
+  controlTaskHandle = osThreadNew(StartControlTask, NULL, &controlTask_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -197,52 +230,13 @@ void MX_FREERTOS_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* init code for USB_DEVICE */
-//   MX_USB_DEVICE_Init();
-  /* init code for USB_DEVICE */
   // MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartDefaultTask */
 
-  // // GREEN LEDs
-  // htim4.Instance->CCR1 = 100;
-  // htim4.Instance->CCR2 = 100;
-  // htim4.Instance->CCR3 = 100;
-
-  // // RED LEDs
-  // htim4.Instance->CCR4 = 100;
-  // htim8.Instance->CCR1 = 100;
-  // htim8.Instance->CCR2 = 100;
-
-  // GREEN LEDs
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
-
-  // RED LEDs
-  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
-  HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
-  HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_2);
-
-  // BUZZER
-  HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
-
-  // htim15.Instance->CCR1 = 500;
-
-  uint16_t pwm = 0;
-
   /* Infinite loop */
-  for (;;)
+  while (true)
   {
-    // printf("Hello World!\n");
-
-    // GREEN LEDs
-    htim4.Instance->CCR4 = pwm % 300;
-    htim8.Instance->CCR1 = (pwm + 100) % 300;
-    htim8.Instance->CCR2 = (pwm + 200) % 300;
-
-    pwm += 2;
-    pwm %= 300;
-
-    osDelay(10);
+    osDelay(100);
   }
   /* USER CODE END StartDefaultTask */
 }

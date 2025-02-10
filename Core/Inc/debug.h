@@ -1,0 +1,50 @@
+#ifndef __DEBUG_H__
+#define __DEBUG_H__
+
+#include "main.h"
+#include "cmsis_os.h"
+
+#include "sensors.h"
+#include "tim.h"
+
+#include <stdio.h>
+
+#define GREEN_LED1 &htim4.Instance->CCR3
+#define GREEN_LED3 &htim4.Instance->CCR1
+#define GREEN_LED2 &htim4.Instance->CCR2
+
+#define RED_LED1 &htim8.Instance->CCR2
+#define RED_LED3 &htim4.Instance->CCR4
+#define RED_LED2 &htim8.Instance->CCR1
+
+#define BUZZER &htim15.Instance->CCR1
+
+#define SLOW_BLINK blink({500, 500}, 1000)
+#define FAST_BLINK blink({100, 100}, 200)
+
+#define BLINK_1 blink({200, 1000}, 1200)
+#define BLINK_2 blink({200, 100, 200, 1000}, 1500)
+#define BLINK_3 blink({200, 100, 200, 100, 200, 1000}, 1800)
+#define BLINK_4 blink({200, 100, 200, 100, 200, 100, 200, 1000}, 2100)
+#define BLINK_5 blink({200, 100, 200, 100, 200, 100, 200, 100, 200, 1000}, 2400)
+
+#define OFF_BRIGHTNESS 0.0
+#define LOW_BRIGHTNESS 0.05
+#define MEDIUM_BRIGHTNESS 0.2
+#define HIGH_BRIGHTNESS 0.5
+#define MAX_BRIGHTNESS 1.0
+
+enum PrintLevel
+{
+	PL_DEBUG = 0,
+	PL_INFO = 1,
+	PL_WARNING = 2,
+	PL_ERROR = 3
+};
+
+extern PrintLevel print_level;
+
+bool blink(std::initializer_list<uint16_t> periods, uint32_t duration);
+void StartDebugTask(void *argument);
+
+#endif /* __CONTROL_H__ */
