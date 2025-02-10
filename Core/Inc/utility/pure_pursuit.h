@@ -5,8 +5,6 @@
 
 #include "utility/vector.h"
 
-#include "control.h"
-
-float calculateCurvature(const State &robot, const Vector &target);
+float calculateCurvature(const Vector &position, const float &orientation, const Vector &target);
 
 #endif /* __PURE_PURSUIT_H__ */

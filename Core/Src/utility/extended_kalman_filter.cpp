@@ -13,6 +13,7 @@ ExtendedKalmanFilter::ExtendedKalmanFilter(Vector (*f)(const Vector &x, const Ve
 	this->_Q = Q;
 
 	this->_state_size = Q.rows();
+	this->_measurement_size = 0;
 
 	this->_x = Vector(this->_state_size);
 	this->_P = Matrix::Identity(this->_state_size);
@@ -53,8 +54,8 @@ void ExtendedKalmanFilter::predict(const Vector &u)
 	Matrix F = this->_F(this->_x, u); // Jacobian of state transition function
 
 	// Predict the state estimate
-	this->_x = f;
-	this->_P = F * this->_P + this->_P * F.transpose() + this->_Q;
+	this->_x += f;
+	this->_P += F * this->_P + this->_P * F.transpose() + this->_Q;
 }
 
 void ExtendedKalmanFilter::update(const Vector &z)

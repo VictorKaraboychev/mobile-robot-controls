@@ -4,8 +4,10 @@
 #include "main.h"
 #include "cmsis_os.h"
 
-#include "sensors.h"
 #include "tim.h"
+
+#include "sensors.h"
+#include "control.h"
 
 #include <stdio.h>
 

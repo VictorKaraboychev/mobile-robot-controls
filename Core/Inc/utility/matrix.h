@@ -12,6 +12,7 @@ class Matrix
 {
 public:
 	Matrix();
+	Matrix(uint8_t size);
 	Matrix(uint8_t rows, uint8_t cols);
 	Matrix(float **data, uint8_t rows, uint8_t cols);
 	Matrix(std::initializer_list<std::initializer_list<float>> data);

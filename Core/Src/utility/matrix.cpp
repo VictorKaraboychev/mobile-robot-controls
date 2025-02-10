@@ -9,6 +9,18 @@ Matrix::Matrix()
 	this->_data = NULL;
 }
 
+Matrix::Matrix(uint8_t size)
+{
+	this->_rows = size;
+	this->_cols = size;
+
+	this->_data = new float *[size];
+	for (uint8_t i = 0; i < size; i++)
+	{
+		this->_data[i] = new float[size]{0};
+	}
+}
+
 Matrix::Matrix(uint8_t rows, uint8_t cols)
 {
 	this->_rows = rows;

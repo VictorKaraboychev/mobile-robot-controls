@@ -51,12 +51,21 @@ void StartDebugTask(void *argument)
 		float elapsed_time = (HAL_GetTick() - last_time) / 1000.0f;
 
 		// Print every 0.5s
-		if (elapsed_time > 0.5f && print_level <= PL_DEBUG)
+		if (elapsed_time > 0.05f && print_level <= PL_DEBUG)
 		{
-			printf("[DEBUG] IMU: %s, Magnetometer: %s, Encoders: %s\n",
-				   imu_data.active ? "  ACTIVE" : "INACTIVE",
-				   mag_data.active ? " ACTIVE" : "INACTIVE",
-				   encoders_data.active ? " ACTIVE" : "INACTIVE");
+			// printf("[DEBUG] IMU: %s, Magnetometer: %s, Encoders: %s\n",
+			// 	   imu_data.active ? "  ACTIVE" : "INACTIVE",
+			// 	   mag_data.active ? " ACTIVE" : "INACTIVE",
+			// 	   encoders_data.active ? " ACTIVE" : "INACTIVE");
+
+			// Print robot state
+			printf("[DEBUG] Position: %.2f %.2f, Velocity: %.2f %.2f, Acceleration: %.2f %.2f, Orientation: %.2f, Angular Velocity: %.2f, Angular Acceleration: %.2f\n",
+				   *robot.position.x, *robot.position.y,
+				   *robot.velocity.x, *robot.velocity.y,
+				   *robot.acceleration.x, *robot.acceleration.y,
+				   robot.orientation * RAD_TO_DEG,
+				   robot.angular_velocity * RAD_TO_DEG,
+				   robot.angular_acceleration * RAD_TO_DEG);
 
 			last_time = HAL_GetTick();
 		}

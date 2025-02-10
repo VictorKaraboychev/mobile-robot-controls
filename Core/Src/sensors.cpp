@@ -78,7 +78,7 @@ void StartImuTask(void *argument)
 		acc_bias += -Vector{(float)acc.x, (float)acc.y, (float)acc.z};
 		gyro_bias += Vector{(float)gyro.x, (float)gyro.y, (float)gyro.z};
 
-		osDelay(2);
+		osDelay(5);
 	}
 
 	acc_bias *= (acc_scale / (float)samples);
@@ -108,12 +108,12 @@ void StartImuTask(void *argument)
 
 		imu_data.active = true;
 
-		// Print biases
-		// printf("ID: 0x%02X Acceleration: %.4f %.4f %.4f Gyroscope: %.4f %.4f %.4f\n", id, *acc_bias.x, *acc_bias.y, *acc_bias.z, *gyro_bias.x, *gyro_bias.y, *gyro_bias.z);
-
 		// printf("ID: 0x%02X Acceleration: %.2f %.2f %.2f Gyroscope: %.4f %.4f %.4f\n", id, *imu_data.acceleration.x, *imu_data.acceleration.y, *imu_data.acceleration.z, *imu_data.angular_velocity.x, *imu_data.angular_velocity.y, *imu_data.angular_velocity.z);
 
-		osDelay(100);
+		// Update the EKF with the IMU data
+		UpdateIMU(imu_data.acceleration, imu_data.angular_velocity);
+
+		osDelay(100); // 100 Hz
 	}
 }
 
@@ -198,11 +198,6 @@ void StartMagTask(void *argument)
 			continue;
 		}
 
-		// printf("Magnetometer: %.2f %.2f %.2f\n",
-		//        (float)(mag.x * mag_scale),
-		//        (float)(mag.y * mag_scale),
-		//        (float)(mag.z * mag_scale));
-
 		// Compute the magnetic orientation
 		roll = atan2(mag.y, mag.z);
 		pitch = atan2(-mag.x, hypot(mag.y, mag.z));
@@ -213,6 +208,9 @@ void StartMagTask(void *argument)
 		mag_data.active = true;
 
 		// printf("ID: 0x%02X Roll: %.1f Pitch: %.1f Yaw: %.1f\n", id, roll * RAD_TO_DEG, pitch * RAD_TO_DEG, yaw * RAD_TO_DEG);
+
+		// Update the EKF with the magnetometer data
+		// UpdateMagnetometer(mag_data.magnetic_orientation); TODO: Enable this when the magnetometer calibration is done and working
 
 		osDelay(100);
 	}
@@ -243,7 +241,7 @@ void StartEncodersTask(void *argument)
 		last_time = HAL_GetTick();
 
 		// Read the encoder data
-		// status = (Read_Encoder(&left->pulses, &right->pulses) == HAL_OK); // TODO: Implement the Read_Encoder function
+		// status = (Read_Encoders(&left->pulses, &right->pulses) == HAL_OK); // TODO: Implement the Read_Encoder function
 
 		if (!status)
 		{
@@ -281,6 +279,9 @@ void StartEncodersTask(void *argument)
 		right->last_pulses = right->pulses;
 
 		encoders_data.active = true;
+
+		// Update the EKF with the encoder data
+		UpdateEncoders(encoders_data.velocity, encoders_data.angular_velocity);
 
 		osDelay(10);
 	}

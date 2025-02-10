@@ -14,7 +14,8 @@
 #include <stdio.h>
 
 #define TARGET_SPEED 0.5f // m/s
-struct State
+#define MAX_SPEED 1.5f	  // m/s
+struct RobotState
 {
 	Vector position;			// x, y (m)
 	Vector velocity;			// v_x, v_y (m/s)
@@ -24,10 +25,13 @@ struct State
 	float angular_acceleration; // α (rad/s^2)
 };
 
-extern State robot;
+extern RobotState robot;
 extern ExtendedKalmanFilter ekf;
 
-void StartDebugTask(void *argument);
+void UpdateIMU(const Vector &acceleration, const Vector &angular_velocity);
+void UpdateMagnetometer(const Vector &orientation);
+void UpdateEncoders(const float &forward_velocity, const float &angular_velocity);
+
 void StartFusionTask(void *argument);
 void StartControlTask(void *argument);
 

@@ -7,15 +7,15 @@ Vector f(const Vector &x, const Vector &u)
 	float dt2 = 0.5f * dt * dt;
 
 	return Vector{
-		x[0] + x[3] * dt + x[6] * dt2, // x = x + v_x * Δt + 0.5 * a_x * Δt^2
-		x[1] + x[4] * dt + x[7] * dt2, // y = y + v_y * Δt + 0.5 * a_y * Δt^2
-		x[2] + x[5] * dt + x[8] * dt2, // θ = θ + ω * Δt + 0.5 * α * Δt^2
-		x[3] + x[6] * dt,			   // v_x = v_x + a_x * Δt
-		x[4] + x[7] * dt,			   // v_y = v_y + a_y * Δt
-		x[5] + x[8] * dt,			   // ω = ω + α * Δt
-		x[6],						   // a_x = a_x
-		x[7],						   // a_y = a_y
-		x[8]						   // α = α
+		x[3] * dt + x[6] * dt2, // x = x + v_x * Δt + 0.5 * a_x * Δt^2
+		x[4] * dt + x[7] * dt2, // y = y + v_y * Δt + 0.5 * a_y * Δt^2
+		x[5] * dt + x[8] * dt2, // θ = θ + ω * Δt + 0.5 * α * Δt^2
+		x[6] * dt,				// v_x = v_x + a_x * Δt
+		x[7] * dt,				// v_y = v_y + a_y * Δt
+		x[8] * dt,				// ω = ω + α * Δt
+		0,						// a_x = a_x
+		0,						// a_y = a_y
+		0						// α = α
 	};
 }
 
@@ -25,7 +25,7 @@ Matrix F(const Vector &x, const Vector &u)
 	float dt = u[0];
 	float dt2 = 0.5f * dt * dt;
 
-	Matrix F = Matrix::Identity(9);
+	Matrix F = Matrix(9);
 
 	// Update non-identity terms
 	F(0, 3) = dt;  // ∂x/∂vx
@@ -101,6 +101,15 @@ Matrix H_imu(const Vector &x)
 // gyro_noise_density = 0.0038 °/s/√Hz (0.000066 rad/s/√Hz) ^ 2 / 1000 Hz
 Matrix R_imu = Matrix::Diagonal({7.5e-4f, 7.5e-4f, 5.0e-5f});
 
+void UpdateIMU(const Vector &acceleration, const Vector &angular_velocity)
+{
+	// Update the state vector
+	Vector z = Vector{*acceleration.x, *acceleration.y, *angular_velocity.z};
+
+	// Update the state estimate
+	ekf.asyncUpdate(z, h_imu, H_imu, R_imu);
+}
+
 // ---Magnetometer---
 
 // Measurement function
@@ -123,6 +132,15 @@ Matrix H_mag(const Vector &x)
 
 // Measurement noise covariance
 Matrix R_mag = Matrix::Diagonal({4.0e-4f});
+
+void UpdateMagnetometer(const Vector &orientation)
+{
+	// Update the state vector
+	Vector z = Vector{*orientation.z};
+
+	// Update the state estimate
+	ekf.asyncUpdate(z, h_mag, H_mag, R_mag);
+}
 
 // ---Encoders---
 
@@ -160,8 +178,17 @@ Matrix H_enc(const Vector &x)
 // Measurement noise covariance
 Matrix R_enc = Matrix::Diagonal({1.0e-4f, 2.5e-5f});
 
+void UpdateEncoders(const float &forward_velocity, const float &angular_velocity)
+{
+	// Update the state vector
+	Vector z = Vector{forward_velocity, angular_velocity};
+
+	// Update the state estimate
+	ekf.asyncUpdate(z, h_enc, H_enc, R_enc);
+}
+
 ExtendedKalmanFilter ekf;
-State robot;
+RobotState robot;
 
 void StartFusionTask(void *argument)
 {
@@ -201,11 +228,24 @@ void StartControlTask(void *argument)
 {
 	while (true)
 	{
-		Vector target = Vector({0, 0}); //GetTarget();
-		float curvature = calculateCurvature(robot, target);
+		Vector target = Vector({0, 0}); // GetTarget();
 
+		// Calculate the curvature
+		float curvature = calculateCurvature(robot.position, robot.orientation, target);
+
+		// Calculate the left and right wheel velocities
 		float left_velocity = TARGET_SPEED * (1 - curvature * WHEEL_DISTANCE / 2.0f);
 		float right_velocity = TARGET_SPEED * (1 + curvature * WHEEL_DISTANCE / 2.0f);
+
+		// Limit the wheel velocities to the maximum speed
+		float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
+
+		// If the maximum velocity is greater than the maximum speed (maintain the ratio)
+		if (max_velocity > MAX_SPEED)
+		{
+			left_velocity *= MAX_SPEED / max_velocity;
+			right_velocity *= MAX_SPEED / max_velocity;
+		}
 
 		osDelay(10); // 100 Hz
 	}
