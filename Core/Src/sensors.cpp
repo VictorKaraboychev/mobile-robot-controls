@@ -222,6 +222,12 @@ void StartMagTask(void *argument)
 
 EncodersData encoders_data;
 
+template <typename T>
+int sign(T val)
+{
+	return (T(0) < val) - (val < T(0));
+}
+
 void StartEncodersTask(void *argument)
 {
 	bool status = false;
@@ -251,26 +257,16 @@ void StartEncodersTask(void *argument)
 		int64_t delta_left = left->pulses - left->last_pulses;
 		int64_t delta_right = right->pulses - right->last_pulses;
 
-		// If the left encoder has made a full revolution in the positive direction (CW)
-		if (delta_left > PULSE_PER_REVOLUTION / 2)
+		// If the left encoder has made a full revolution
+		if (abs(delta_left) > PULSE_PER_REVOLUTION / 2)
 		{
-			delta_left -= 4096;
-		}
-		// If the left encoder has made a full revolution in the negative direction (CCW)
-		else if (delta_left < -PULSE_PER_REVOLUTION / 2)
-		{
-			delta_left += 4096;
+			delta_left -= 4096 * sign(delta_left);
 		}
 
-		// If the right encoder has made a full revolution in the positive direction (CW)
-		if (delta_right > PULSE_PER_REVOLUTION / 2)
+		// If the right encoder has made a full revolution
+		if (abs(delta_right) > PULSE_PER_REVOLUTION / 2)
 		{
-			delta_right -= 4096;
-		}
-		// If the right encoder has made a full revolution in the negative direction (CCW)
-		else if (delta_right < -PULSE_PER_REVOLUTION / 2)
-		{
-			delta_right += 4096;
+			delta_right -= 4096 * sign(delta_right);
 		}
 
 		// Compute the encoder velocity
