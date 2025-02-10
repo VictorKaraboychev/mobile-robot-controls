@@ -7,11 +7,13 @@
 #include "utility/vector.h"
 #include "utility/matrix.h"
 #include "extended_kalman_filter.h"
+#include "pure_pursuit.h"
 
 #include "sensors.h"
 
 #include <stdio.h>
 
+#define TARGET_SPEED 0.5f // m/s
 struct State
 {
 	Vector position;			// x, y (m)

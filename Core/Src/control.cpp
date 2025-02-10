@@ -193,7 +193,7 @@ void StartFusionTask(void *argument)
 		robot.acceleration = ekfState.getSubVector(6, 7);
 		robot.angular_acceleration = ekfState[8];
 
-		osDelay(10);
+		osDelay(10); // 100 Hz
 	}
 }
 
@@ -201,8 +201,14 @@ void StartControlTask(void *argument)
 {
 	while (true)
 	{
-		// printf("Hello World!\n");
+		Vector target = Vector({0, 0}); //GetTarget();
+		float curvature_radius = calculateCurvatureRadius(robot, target);
 
-		osDelay(100);
+		float speed_ratio = calculateSpeedRatio(curvature_radius, WHEEL_DISTANCE);
+
+		float left_velocity = TARGET_SPEED * (1.0f - speed_ratio);
+		float right_velocity = TARGET_SPEED * (1.0f + speed_ratio);
+
+		osDelay(10); // 100 Hz
 	}
 }
