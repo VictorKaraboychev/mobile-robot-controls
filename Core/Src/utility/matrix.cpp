@@ -716,7 +716,7 @@ void Matrix::print() const
 	delete[] result;
 }
 
-Matrix Matrix::Identity(uint8_t size)
+Matrix Matrix::Identity(const uint8_t size)
 {
 	Matrix result(size, size);
 
@@ -754,7 +754,51 @@ Matrix Matrix::Diagonal(const std::initializer_list<float> data)
 	return result;
 }
 
-Matrix Matrix::Quaternion(const float x, const float y, const float z, const float w)
+Matrix Matrix::Rotation2D(const float theta)
+{
+	float s = sin(theta);
+	float c = cos(theta);
+
+	Matrix result(2, 2);
+
+	result._data[0][0] = c;
+	result._data[0][1] = -s;
+
+	result._data[1][0] = s;
+	result._data[1][1] = c;
+
+	return result;
+}
+
+Matrix Matrix::Rotation3D(const float theta, const float phi, const float psi)
+{
+	float s1 = sin(theta);
+	float c1 = cos(theta);
+
+	float s2 = sin(phi);
+	float c2 = cos(phi);
+
+	float s3 = sin(psi);
+	float c3 = cos(psi);
+
+	Matrix result(3, 3);
+
+	result._data[0][0] = c1 * c3;
+	result._data[0][1] = c1 * s3;
+	result._data[0][2] = -s1;
+
+	result._data[1][0] = -c3 * s3 + s1 * s2 * c3;
+	result._data[1][1] = c2 * c3 + s1 * s2 * s3;
+	result._data[1][2] = c1 * s2;
+
+	result._data[2][0] = s2 * s3 + s1 * c2 * c3;
+	result._data[2][1] = -s2 * c3 + s1 * c2 * s3;
+	result._data[2][2] = c1 * c2;
+
+	return result;
+}
+
+Matrix Matrix::Rotation3D(const float x, const float y, const float z, const float w)
 {
 	Matrix result(3, 3);
 
@@ -773,15 +817,7 @@ Matrix Matrix::Quaternion(const float x, const float y, const float z, const flo
 	return result;
 }
 
-Matrix Matrix::Rotation2D(const float angle)
+Matrix Matrix::Rotation3D(const Quaternion &q)
 {
-	Matrix result(2, 2);
-
-	result._data[0][0] = cos(angle);
-	result._data[0][1] = -sin(angle);
-
-	result._data[1][0] = sin(angle);
-	result._data[1][1] = cos(angle);
-
-	return result;
+	return Rotation3D(q.x, q.y, q.z, q.w);
 }

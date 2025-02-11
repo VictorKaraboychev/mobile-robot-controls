@@ -7,6 +7,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "utility/vector.h"
+#include "utility/quaternion.h"
 
 class Matrix
 {
@@ -60,11 +61,14 @@ public:
 
 	void print() const;
 
-	static Matrix Identity(uint8_t size);
+	static Matrix Identity(const uint8_t size);
 	static Matrix Diagonal(const Vector &v);
 	static Matrix Diagonal(const std::initializer_list<float> data);
-	static Matrix Quaternion(const float x, const float y, const float z, const float w);
-	static Matrix Rotation2D(const float angle);
+	
+	static Matrix Rotation2D(const float theta);
+	static Matrix Rotation3D(const float theta, const float phi, const float psi);
+	static Matrix Rotation3D(const float x, const float y, const float z, const float w);
+	static Matrix Rotation3D(const Quaternion &q);
 
 private:
 	uint8_t _rows;
