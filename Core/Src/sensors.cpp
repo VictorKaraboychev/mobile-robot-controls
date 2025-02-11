@@ -220,12 +220,6 @@ void StartMagTask(void *argument)
 
 EncodersData encoders_data;
 
-template <typename T>
-int sign(T val)
-{
-	return (T(0) < val) - (val < T(0));
-}
-
 void StartEncodersTask(void *argument)
 {
 	bool status = false;
@@ -258,13 +252,13 @@ void StartEncodersTask(void *argument)
 		// If the left encoder has made a full revolution
 		if (abs(delta_left) > PULSE_PER_REVOLUTION / 2)
 		{
-			delta_left -= 4096 * sign(delta_left);
+			delta_left -= copysignf(PULSE_PER_REVOLUTION, delta_left);
 		}
 
 		// If the right encoder has made a full revolution
 		if (abs(delta_right) > PULSE_PER_REVOLUTION / 2)
 		{
-			delta_right -= 4096 * sign(delta_right);
+			delta_right -= copysignf(PULSE_PER_REVOLUTION, delta_right);
 		}
 
 		// Compute the encoder velocity

@@ -16,9 +16,9 @@ class Vector
 {
 public:
 	Vector();
-	Vector(uint8_t size);
-	Vector(float *data, uint8_t size);
-	Vector(std::initializer_list<float> list);
+	Vector(const uint8_t size);
+	Vector(float *data, const uint8_t size);
+	Vector(const std::initializer_list<float> list);
 	Vector(const Vector &v);
 	~Vector();
 

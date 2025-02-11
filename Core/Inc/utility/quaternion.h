@@ -12,8 +12,8 @@ class Quaternion
 {
 public:
 	Quaternion();
-	Quaternion(float x, float y, float z, float w);
-	Quaternion(float pitch, float roll, float yaw);
+	Quaternion(const float x, const float y, const float z, const float w);
+	Quaternion(const float pitch, const float roll, const float yaw);
 	Quaternion(const Quaternion &q);
 	~Quaternion();
 

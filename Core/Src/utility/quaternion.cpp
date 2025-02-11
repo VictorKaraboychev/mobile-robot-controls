@@ -10,7 +10,7 @@ Quaternion::Quaternion()
 	this->w = 0;
 }
 
-Quaternion::Quaternion(float x, float y, float z, float w)
+Quaternion::Quaternion(const float x, const float y, const float z, const float w)
 {
 	this->x = x;
 	this->y = y;
@@ -18,7 +18,7 @@ Quaternion::Quaternion(float x, float y, float z, float w)
 	this->w = w;
 }
 
-Quaternion::Quaternion(float pitch, float roll, float yaw)
+Quaternion::Quaternion(const float pitch, const float roll, const float yaw)
 {
 	float cy = cosf(yaw * 0.5f);
 	float sy = sinf(yaw * 0.5f);

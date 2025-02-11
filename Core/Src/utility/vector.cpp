@@ -8,7 +8,7 @@ Vector::Vector()
 	this->_size = 0;
 }
 
-Vector::Vector(uint8_t size)
+Vector::Vector(const uint8_t size)
 {
 	this->_data = new float[size]{0};
 	this->_size = size;
@@ -16,7 +16,7 @@ Vector::Vector(uint8_t size)
 	this->_updatexyz();
 }
 
-Vector::Vector(float *data, uint8_t size)
+Vector::Vector(float *data, const uint8_t size)
 {
 	this->_data = new float[size];
 	this->_size = size;
@@ -29,7 +29,7 @@ Vector::Vector(float *data, uint8_t size)
 	this->_updatexyz();
 }
 
-Vector::Vector(std::initializer_list<float> data)
+Vector::Vector(const std::initializer_list<float> data)
 {
 	this->_size = data.size();
 	this->_data = new float[this->_size];

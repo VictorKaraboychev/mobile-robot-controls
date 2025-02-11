@@ -13,10 +13,10 @@ class Matrix
 {
 public:
 	Matrix();
-	Matrix(uint8_t size);
-	Matrix(uint8_t rows, uint8_t cols);
-	Matrix(float **data, uint8_t rows, uint8_t cols);
-	Matrix(std::initializer_list<std::initializer_list<float>> data);
+	Matrix(const uint8_t size);
+	Matrix(const uint8_t rows, const uint8_t cols);
+	Matrix(float **data, const uint8_t rows, const uint8_t cols);
+	Matrix(const std::initializer_list<std::initializer_list<float>> &data);
 	Matrix(const Matrix &m);
 	~Matrix();
 
@@ -63,10 +63,11 @@ public:
 
 	static Matrix Identity(const uint8_t size);
 	static Matrix Diagonal(const Vector &v);
-	static Matrix Diagonal(const std::initializer_list<float> data);
-	
+	static Matrix Diagonal(const std::initializer_list<float> &data);
+
 	static Matrix Rotation2D(const float theta);
 	static Matrix Rotation3D(const float theta, const float phi, const float psi);
+	static Matrix Rotation3D(const Vector &v);
 	static Matrix Rotation3D(const float x, const float y, const float z, const float w);
 	static Matrix Rotation3D(const Quaternion &q);
 

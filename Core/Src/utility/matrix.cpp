@@ -9,7 +9,7 @@ Matrix::Matrix()
 	this->_data = NULL;
 }
 
-Matrix::Matrix(uint8_t size)
+Matrix::Matrix(const uint8_t size)
 {
 	this->_rows = size;
 	this->_cols = size;
@@ -21,7 +21,7 @@ Matrix::Matrix(uint8_t size)
 	}
 }
 
-Matrix::Matrix(uint8_t rows, uint8_t cols)
+Matrix::Matrix(const uint8_t rows, const uint8_t cols)
 {
 	this->_rows = rows;
 	this->_cols = cols;
@@ -33,7 +33,7 @@ Matrix::Matrix(uint8_t rows, uint8_t cols)
 	}
 }
 
-Matrix::Matrix(float **data, uint8_t rows, uint8_t cols)
+Matrix::Matrix(float **data, const uint8_t rows, const uint8_t cols)
 {
 	this->_rows = rows;
 	this->_cols = cols;
@@ -50,7 +50,7 @@ Matrix::Matrix(float **data, uint8_t rows, uint8_t cols)
 	}
 }
 
-Matrix::Matrix(std::initializer_list<std::initializer_list<float>> data)
+Matrix::Matrix(const std::initializer_list<std::initializer_list<float>> &data)
 {
 	this->_rows = data.size();
 	this->_cols = data.begin()->size();
@@ -740,7 +740,7 @@ Matrix Matrix::Diagonal(const Vector &v)
 	return result;
 }
 
-Matrix Matrix::Diagonal(const std::initializer_list<float> data)
+Matrix Matrix::Diagonal(const std::initializer_list<float> &data)
 {
 	Matrix result(data.size(), data.size());
 
@@ -796,6 +796,11 @@ Matrix Matrix::Rotation3D(const float theta, const float phi, const float psi)
 	result._data[2][2] = c1 * c2;
 
 	return result;
+}
+
+Matrix Matrix::Rotation3D(const Vector &v)
+{
+	return Rotation3D(v[0], v[1], v[2]);
 }
 
 Matrix Matrix::Rotation3D(const float x, const float y, const float z, const float w)
