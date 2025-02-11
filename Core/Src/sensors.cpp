@@ -181,6 +181,32 @@ void StartMagTask(void *argument)
 	bool status = false;
 
 	// Calibrate the magnetometer
+	uint16_t samples = 1000;
+
+	Matrix soft_iron(3, 3);
+	Vector hard_iron(3);
+
+	for (uint16_t i = 0; i < samples; i++)
+	{
+		LIS2MDL_MAG_GetAxes(&lis2mdl, &mag);
+
+		soft_iron(0, 0) += mag.x * mag.x;
+		soft_iron(0, 1) += mag.x * mag.y;
+		soft_iron(0, 2) += mag.x * mag.z;
+		soft_iron(1, 1) += mag.y * mag.y;
+		soft_iron(1, 2) += mag.y * mag.z;
+		soft_iron(2, 2) += mag.z * mag.z;
+
+		hard_iron += Vector{(float)mag.x, (float)mag.y, (float)mag.z};
+
+		osDelay(5);
+	}
+
+	soft_iron /= (float)samples;
+	hard_iron /= (float)samples;
+
+	// lis2mdl_mag_user_offset_set(&lis2mdl.Ctx, (int16_t)hard_iron.x, (int16_t)hard_iron.y, (int16_t)hard_iron.z);
+
 
 	while (1)
 	{
@@ -245,11 +271,11 @@ void StartEncodersTask(void *argument)
 			continue;
 		}
 
-		// Compute the delta pulses and handle discontinuity
+		// Compute the delta pulses
 		int64_t delta_left = left->pulses - left->last_pulses;
 		int64_t delta_right = right->pulses - right->last_pulses;
 
-		// If the left encoder has made a full revolution
+		// If the left encoder has made a full revolution handle the discontinuity
 		if (abs(delta_left) > PULSE_PER_REVOLUTION / 2)
 		{
 			delta_left -= copysignf(PULSE_PER_REVOLUTION, delta_left);
@@ -265,6 +291,7 @@ void StartEncodersTask(void *argument)
 		float left_velocity = (left->pulses - left->last_pulses) * (DISTANCE_PER_PULSE / delta_time);
 		float right_velocity = (right->pulses - right->last_pulses) * (DISTANCE_PER_PULSE / delta_time);
 
+		// Map the encoder data to the encoder data structure
 		encoders_data.velocity = (left_velocity + right_velocity) / 2.0f;
 		encoders_data.angular_velocity = (right_velocity - left_velocity) / WHEEL_DISTANCE;
 
@@ -275,7 +302,7 @@ void StartEncodersTask(void *argument)
 		encoders_data.active = true;
 
 		// Update the EKF with the encoder data
-		UpdateEncoders(encoders_data.velocity, encoders_data.angular_velocity);
+		// UpdateEncoders(encoders_data.velocity, encoders_data.angular_velocity);
 
 		osDelay(10);
 	}
