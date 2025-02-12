@@ -66,7 +66,9 @@ public:
 	static Matrix Diagonal(const std::initializer_list<float> &data);
 
 	static Matrix Rotation2D(const float theta);
-	static Matrix Rotation3D(const float theta, const float phi, const float psi);
+	// Euler angles [roll (φ), pitch (θ), yaw (ψ)]
+	static Matrix Rotation3D(const float phi, const float theta, const float psi);
+	// Euler angles [roll (φ), pitch (θ), yaw (ψ)]
 	static Matrix Rotation3D(const Vector &v);
 	static Matrix Rotation3D(const float x, const float y, const float z, const float w);
 	static Matrix Rotation3D(const Quaternion &q);
