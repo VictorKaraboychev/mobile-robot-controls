@@ -29,7 +29,7 @@ Vector::Vector(float *data, const uint8_t size)
 	this->_updatexyz();
 }
 
-Vector::Vector(const std::initializer_list<float> data)
+Vector::Vector(const std::initializer_list<float> &data)
 {
 	this->_size = data.size();
 	this->_data = new float[this->_size];
@@ -486,19 +486,17 @@ Vector Vector::Exp(const Vector &v)
 
 void Vector::_updatexyz()
 {
-	uint8_t s = this->_size;
-
-	if (s > 0)
+	if (this->_size > 0)
 	{
 		this->x = this->_data + 0;
 	}
 
-	if (s > 1)
+	if (this->_size > 1)
 	{
 		this->y = this->_data + 1;
 	}
 
-	if (s > 2)
+	if (this->_size > 2)
 	{
 		this->z = this->_data + 2;
 	}
