@@ -787,13 +787,13 @@ Matrix Matrix::Rotation3D(const float phi, const float theta, const float psi)
 	result._data[0][1] = c2 * s3;
 	result._data[0][2] = -s2;
 
-	result._data[1][0] = -c3 * s3 + s2 * s1 * c3;
-	result._data[1][1] = c1 * c3 + s2 * s1 * s3;
-	result._data[1][2] = c2 * s1;
+	result._data[1][0] = -c1 * s3 + s1 * s2 * c3;
+	result._data[1][1] = c1 * c3 + s1 * s2 * s3;
+	result._data[1][2] = s1	* c2;
 
-	result._data[2][0] = s1 * s3 + s2 * c1 * c3;
-	result._data[2][1] = -s1 * c3 + s2 * c1 * s3;
-	result._data[2][2] = c2 * c1;
+	result._data[2][0] = s1 * s3 + c1 * s2 * c3;
+	result._data[2][1] = -s1 * c3 + c1 * s2 * s3;
+	result._data[2][2] = c1 * c2;
 
 	return result;
 }
