@@ -27,15 +27,15 @@ Vector f(const Vector &x, const Vector &u)
 	}
 
 	return Vector{
-		x[0], // + x[6] * dt + x[12] * dt2, // x = x + x' * Δt + 0.5 * x'' * Δt^2
-		x[1], // + x[7] * dt + x[13] * dt2, // y = y + y' * Δt + 0.5 * y'' * Δt^2
-		x[2], // + x[8] * dt + x[14] * dt2, // z = z + z' * Δt + 0.5 * z'' * Δt^2
+		x[0] + x[6] * dt + x[12] * dt2, // x = x + x' * Δt + 0.5 * x'' * Δt^2
+		x[1] + x[7] * dt + x[13] * dt2, // y = y + y' * Δt + 0.5 * y'' * Δt^2
+		x[2] + x[8] * dt + x[14] * dt2, // z = z + z' * Δt + 0.5 * z'' * Δt^2
 		phi,							// φ = φ + φ' * Δt
 		theta,							// θ = θ + θ' * Δt
 		psi,							// ψ = ψ + ψ' * Δt
-		x[6], // + x[12] * dt,				// x' = x' + x'' * Δt
-		x[7], // + x[13] * dt,				// y' = y' + y'' * Δt
-		x[8], // + x[14] * dt,				// z' = z' + z'' * Δt
+		x[6] + x[12] * dt,				// x' = x' + x'' * Δt
+		x[7] + x[13] * dt,				// y' = y' + y'' * Δt
+		x[8] + x[14] * dt,				// z' = z' + z'' * Δt
 		x[9],							// φ' = φ'
 		x[10],							// θ' = θ'
 		x[11],							// ψ' = ψ'
@@ -53,14 +53,14 @@ Matrix F(const Vector &x, const Vector &u)
 
 	Matrix F = Matrix::Identity(KALMAN_STATE_SIZE);
 
-	// F(0, 6) = dt;	// ∂x/∂x'
-	// F(0, 12) = dt2; // ∂x/∂x''
+	F(0, 6) = dt;	// ∂x/∂x'
+	F(0, 12) = dt2; // ∂x/∂x''
 
-	// F(1, 7) = dt;	// ∂y/∂y'
-	// F(1, 13) = dt2; // ∂y/∂y''
+	F(1, 7) = dt;	// ∂y/∂y'
+	F(1, 13) = dt2; // ∂y/∂y''
 
-	// F(2, 8) = dt;	// ∂z/∂z'
-	// F(2, 14) = dt2; // ∂z/∂z''
+	F(2, 8) = dt;	// ∂z/∂z'
+	F(2, 14) = dt2; // ∂z/∂z''
 
 	F(4, 10) = dt; // ∂φ/∂φ'
 
@@ -68,11 +68,11 @@ Matrix F(const Vector &x, const Vector &u)
 
 	F(5, 11) = dt; // ∂ψ/∂ψ'
 
-	// F(6, 12) = dt; // ∂x'/∂x''
+	F(6, 12) = dt; // ∂x'/∂x''
 
-	// F(7, 13) = dt; // ∂y'/∂y''
+	F(7, 13) = dt; // ∂y'/∂y''
 
-	// F(8, 14) = dt; // ∂z'/∂z''
+	F(8, 14) = dt; // ∂z'/∂z''
 
 	return F;
 }
@@ -142,7 +142,7 @@ void UpdateAccelerometer(const Vector &acceleration)
 	Vector orientation = robot.orientation;
 
 	// If the magnitude of the acceleration vector is close to gravity, the pitch and roll angles can be calculated using the accelerometer
-	if (abs(magnitude - GRAVITY) < 0.25f)
+	if (abs(magnitude - GRAVITY) < 0.1f)
 	{
 		*orientation.x = atan2(*acceleration.y, -*acceleration.z);
 		*orientation.y = atan2(-*acceleration.x, hypot(*acceleration.y, *acceleration.z));
@@ -155,7 +155,7 @@ void UpdateAccelerometer(const Vector &acceleration)
 	*world_acceleration.z += GRAVITY;
 
 	// Update the state vector
-	Vector z = Vector(5); //Vector{*orientation.x, *orientation.y, *world_acceleration.x, *world_acceleration.y, *world_acceleration.z};
+	Vector z = Vector(5); // Vector{*orientation.x, *orientation.y, *world_acceleration.x, *world_acceleration.y, *world_acceleration.z};
 
 	robot.orientation.print();
 
