@@ -116,7 +116,7 @@ void StartImuTask(void *argument)
 		UpdateAccelerometer(imu_data.acceleration);
 		UpdateGyroscope(imu_data.angular_velocity);
 
-		osDelay(100); // 100 Hz
+		osDelay(10); // 100 Hz
 	}
 }
 

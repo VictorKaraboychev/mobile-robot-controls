@@ -59,12 +59,12 @@ void StartDebugTask(void *argument)
 			// 	   encoders_data.active ? " ACTIVE" : "INACTIVE");
 
 			// Print robot state
-			printf("[DEBUG] s: %.2f %.2f %.2f, v: %.2f %.2f %.2f, a: %.2f %.2f %.2f, w: %.2f %.2f %.2f, w_v: %.2f %.2f %.2f\n",
-				   *robot.position.x, *robot.position.y, *robot.position.z,
-				   *robot.velocity.x, *robot.velocity.y, *robot.velocity.z,
-				   *robot.acceleration.x, *robot.acceleration.y, *robot.acceleration.z,
-				   *robot.orientation.x * RAD_TO_DEG, *robot.orientation.y * RAD_TO_DEG, *robot.orientation.z * RAD_TO_DEG,
-				   *robot.angular_velocity.x * RAD_TO_DEG, *robot.angular_velocity.y * RAD_TO_DEG, *robot.angular_velocity.z * RAD_TO_DEG);
+			// printf("[DEBUG] s: %.2f %.2f %.2f, v: %.2f %.2f %.2f, a: %.2f %.2f %.2f, w: %.2f %.2f %.2f, w_v: %.2f %.2f %.2f\n",
+			// 	   *robot.position.x, *robot.position.y, *robot.position.z,
+			// 	   *robot.velocity.x, *robot.velocity.y, *robot.velocity.z,
+			// 	   *robot.acceleration.x, *robot.acceleration.y, *robot.acceleration.z,
+			// 	   *robot.orientation.x * RAD_TO_DEG, *robot.orientation.y * RAD_TO_DEG, *robot.orientation.z * RAD_TO_DEG,
+			// 	   *robot.angular_velocity.x * RAD_TO_DEG, *robot.angular_velocity.y * RAD_TO_DEG, *robot.angular_velocity.z * RAD_TO_DEG);
 
 			last_time = HAL_GetTick();
 		}

@@ -27,15 +27,15 @@ Vector f(const Vector &x, const Vector &u)
 	}
 
 	return Vector{
-		x[0] + x[6] * dt + x[12] * dt2, // x = x + x' * Δt + 0.5 * x'' * Δt^2
-		x[1] + x[7] * dt + x[13] * dt2, // y = y + y' * Δt + 0.5 * y'' * Δt^2
-		x[2] + x[8] * dt + x[14] * dt2, // z = z + z' * Δt + 0.5 * z'' * Δt^2
+		x[0], // + x[6] * dt + x[12] * dt2, // x = x + x' * Δt + 0.5 * x'' * Δt^2
+		x[1], // + x[7] * dt + x[13] * dt2, // y = y + y' * Δt + 0.5 * y'' * Δt^2
+		x[2], // + x[8] * dt + x[14] * dt2, // z = z + z' * Δt + 0.5 * z'' * Δt^2
 		phi,							// φ = φ + φ' * Δt
 		theta,							// θ = θ + θ' * Δt
 		psi,							// ψ = ψ + ψ' * Δt
-		x[6] + x[12] * dt,				// x' = x' + x'' * Δt
-		x[7] + x[13] * dt,				// y' = y' + y'' * Δt
-		x[8] + x[14] * dt,				// z' = z' + z'' * Δt
+		x[6], // + x[12] * dt,				// x' = x' + x'' * Δt
+		x[7], // + x[13] * dt,				// y' = y' + y'' * Δt
+		x[8], // + x[14] * dt,				// z' = z' + z'' * Δt
 		x[9],							// φ' = φ'
 		x[10],							// θ' = θ'
 		x[11],							// ψ' = ψ'
@@ -51,16 +51,16 @@ Matrix F(const Vector &x, const Vector &u)
 	float dt = u[0];
 	float dt2 = 0.5f * dt * dt;
 
-	Matrix F = Matrix::Identity(KALMAN_STATE_SIZE);
+	Matrix F = Matrix(KALMAN_STATE_SIZE);
 
-	F(0, 6) = dt;	// ∂x/∂x'
-	F(0, 12) = dt2; // ∂x/∂x''
+	// F(0, 6) = dt;	// ∂x/∂x'
+	// F(0, 12) = dt2; // ∂x/∂x''
 
-	F(1, 7) = dt;	// ∂y/∂y'
-	F(1, 13) = dt2; // ∂y/∂y''
+	// F(1, 7) = dt;	// ∂y/∂y'
+	// F(1, 13) = dt2; // ∂y/∂y''
 
-	F(2, 8) = dt;	// ∂z/∂z'
-	F(2, 14) = dt2; // ∂z/∂z''
+	// F(2, 8) = dt;	// ∂z/∂z'
+	// F(2, 14) = dt2; // ∂z/∂z''
 
 	F(4, 10) = dt; // ∂φ/∂φ'
 
@@ -68,11 +68,11 @@ Matrix F(const Vector &x, const Vector &u)
 
 	F(5, 11) = dt; // ∂ψ/∂ψ'
 
-	F(6, 12) = dt; // ∂x'/∂x''
+	// F(6, 12) = dt; // ∂x'/∂x''
 
-	F(7, 13) = dt; // ∂y'/∂y''
+	// F(7, 13) = dt; // ∂y'/∂y''
 
-	F(8, 14) = dt; // ∂z'/∂z''
+	// F(8, 14) = dt; // ∂z'/∂z''
 
 	return F;
 }
@@ -135,18 +135,29 @@ Matrix R_accelerometer = Matrix::Diagonal({5e-3f, 5e-3f, 1e-4f, 1e-4f, 1e-4f}); 
 
 void UpdateAccelerometer(const Vector &acceleration)
 {
+	// Magnitude of the acceleration vector
+	float magnitude = acceleration.magnitude();
+
+	// Compute pitch and roll
+	Vector orientation = robot.orientation;
+
+	// If the magnitude of the acceleration vector is close to gravity, the pitch and roll angles can be calculated using the accelerometer
+	if (abs(magnitude - GRAVITY) < 0.25f)
+	{
+		*orientation.x = atan2(*acceleration.y, -*acceleration.z);
+		*orientation.y = atan2(-*acceleration.x, hypot(*acceleration.y, *acceleration.z));
+	}
+
 	// Rotate the acceleration vector to the world frame
 	Vector world_acceleration = Matrix::Rotation3D(robot.orientation) * acceleration;
 
 	// Subtract gravity from the z-axis
-	world_acceleration[2] += GRAVITY;
-
-	// Compute pitch and roll
-	float roll = atan2(*acceleration.y, -*acceleration.z);
-	float pitch = atan2(-*acceleration.x, hypot(*acceleration.y, *acceleration.z));
+	*world_acceleration.z += GRAVITY;
 
 	// Update the state vector
-	Vector z = Vector{roll, pitch, *world_acceleration.x, *world_acceleration.y, *world_acceleration.z};
+	Vector z = Vector(5); //Vector{*orientation.x, *orientation.y, *world_acceleration.x, *world_acceleration.y, *world_acceleration.z};
+
+	robot.orientation.print();
 
 	// Update the state estimate
 	ekf.asyncUpdate(z, h_accelerometer, H_accelerometer, R_accelerometer);
@@ -181,29 +192,29 @@ Matrix R_gyroscope = Matrix::Diagonal({5.0e-5f, 5.0e-5f, 5.0e-5f}); // gyro_nois
 
 void UpdateGyroscope(const Vector &angular_velocity)
 {
-	float s1 = sin(*robot.orientation.x);
-	float c1 = cos(*robot.orientation.x);
+	// float s1 = sin(*robot.orientation.x);
+	// float c1 = cos(*robot.orientation.x);
 
-	float c2 = cos(*robot.orientation.y);
-	float t2 = tan(*robot.orientation.y);
+	// float c2 = cos(*robot.orientation.y);
+	// float t2 = tan(*robot.orientation.y);
 
-	float p = *angular_velocity.x;
-	float q = *angular_velocity.y;
-	float r = *angular_velocity.z;
+	// float p = *angular_velocity.x;
+	// float q = *angular_velocity.y;
+	// float r = *angular_velocity.z;
 
-	Vector world_angular_velocity = Vector{
-		p + (q * s1 + r * c1) * t2, // φ' = p + (q * s1 + r * c1) * t2
-		q * c1 - r * s1,			// θ' = q * c1 - r * s1
-		(q * s1 + r * c1) / c2		// ψ' = (q * s1 + r * c1) / c2
-	};
+	// Vector world_angular_velocity = Vector{
+	// 	p + (q * s1 + r * c1) * t2, // φ' = p + (q * s1 + r * c1) * t2
+	// 	q * c1 - r * s1,			// θ' = q * c1 - r * s1
+	// 	(q * s1 + r * c1) / c2		// ψ' = (q * s1 + r * c1) / c2
+	// };
 
 	// Update the state vector
-	Vector z = Vector{*world_angular_velocity.x, *world_angular_velocity.y, *world_angular_velocity.z};
+	// Vector z = Vector{*world_angular_velocity.x, *world_angular_velocity.y, *world_angular_velocity.z};
 
 	// z.print();
 
 	// Update the state estimate
-	ekf.asyncUpdate(z, h_gyroscope, H_gyroscope, R_gyroscope);
+	// ekf.asyncUpdate(z, h_gyroscope, H_gyroscope, R_gyroscope);
 }
 
 // ---Magnetometer---
@@ -326,24 +337,25 @@ void StartControlTask(void *argument)
 {
 	while (true)
 	{
-		Vector target = Vector({0, 0}); // GetTarget();
 
-		// Calculate the curvature
-		float curvature = 0; // calculateCurvature(robot.position, robot.orientation, target);
+		// Vector target = Vector({0, 0}); // GetTarget();
 
-		// Calculate the left and right wheel velocities
-		float left_velocity = TARGET_SPEED * (1 - curvature * WHEEL_DISTANCE / 2.0f);
-		float right_velocity = TARGET_SPEED * (1 + curvature * WHEEL_DISTANCE / 2.0f);
+		// // Calculate the curvature
+		// float curvature = 0; // calculateCurvature(robot.position, robot.orientation, target);
 
-		// Limit the wheel velocities to the maximum speed
-		float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
+		// // Calculate the left and right wheel velocities
+		// float left_velocity = TARGET_SPEED * (1 - curvature * WHEEL_DISTANCE / 2.0f);
+		// float right_velocity = TARGET_SPEED * (1 + curvature * WHEEL_DISTANCE / 2.0f);
 
-		// If the maximum velocity is greater than the maximum speed (maintain the ratio)
-		if (max_velocity > MAX_SPEED)
-		{
-			left_velocity *= MAX_SPEED / max_velocity;
-			right_velocity *= MAX_SPEED / max_velocity;
-		}
+		// // Limit the wheel velocities to the maximum speed
+		// float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
+
+		// // If the maximum velocity is greater than the maximum speed (maintain the ratio)
+		// if (max_velocity > MAX_SPEED)
+		// {
+		// 	left_velocity *= MAX_SPEED / max_velocity;
+		// 	right_velocity *= MAX_SPEED / max_velocity;
+		// }
 
 		osDelay(10); // 100 Hz
 	}
