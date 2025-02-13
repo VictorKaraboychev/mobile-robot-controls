@@ -17,18 +17,18 @@
 #define MAX_SPEED 1.5f	  // m/s
 struct RobotState
 {
-	Vector position;			// x, y (m)
-	Vector velocity;			// v_x, v_y (m/s)
-	Vector acceleration;		// a_x, a_y (m/s^2)
-	float orientation;			// θ (rad)
-	float angular_velocity;		// ω (rad/s)
-	float angular_acceleration; // α (rad/s^2)
+	Vector position;		 // x, y, z (m)
+	Vector velocity;		 // v_x, v_y, v_z (m/s)
+	Vector acceleration;	 // a_x, a_y, a_z (m/s^2)
+	Vector orientation;		 // (θ, φ, ψ) (rad)
+	Vector angular_velocity; // (ω_x, ω_y, ω_z) (rad/s)
 };
 
 extern RobotState robot;
 extern ExtendedKalmanFilter ekf;
 
-void UpdateIMU(const Vector &acceleration, const Vector &angular_velocity);
+void UpdateAccelerometer(const Vector &acceleration);
+void UpdateGyroscope(const Vector &angular_velocity);
 void UpdateMagnetometer(const Vector &orientation);
 void UpdateEncoders(const float &forward_velocity, const float &angular_velocity);
 

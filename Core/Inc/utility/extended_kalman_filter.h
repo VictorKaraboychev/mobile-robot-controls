@@ -15,6 +15,8 @@ public:
 	~ExtendedKalmanFilter();
 
 	void initialize(const Vector &x, const Matrix &P);
+
+	// Predict the state estimate
 	void predict(const Vector &u);
 
 	// Synchronous update

@@ -54,8 +54,8 @@ void ExtendedKalmanFilter::predict(const Vector &u)
 	Matrix F = this->_F(this->_x, u); // Jacobian of state transition function
 
 	// Predict the state estimate
-	this->_x += f;
-	this->_P += F * this->_P + this->_P * F.transpose() + this->_Q;
+	this->_x = f;
+	this->_P = F * this->_P * F.transpose() + this->_Q;
 }
 
 void ExtendedKalmanFilter::update(const Vector &z)

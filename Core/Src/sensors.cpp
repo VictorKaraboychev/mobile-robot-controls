@@ -78,13 +78,15 @@ void StartImuTask(void *argument)
 		acc_bias += -Vector{(float)acc.x, (float)acc.y, (float)acc.z};
 		gyro_bias += Vector{(float)gyro.x, (float)gyro.y, (float)gyro.z};
 
-		osDelay(5);
+		osDelay(2);
 	}
 
 	acc_bias *= (acc_scale / (float)samples);
 	gyro_bias *= (gyro_scale / (float)samples);
 
 	*acc_bias.z += GRAVITY; // Subtract gravity from the z-axis
+
+	printf("Accelerometer Bias: %.2f %.2f %.2f Gyroscope Bias: %.4f %.4f %.4f\n", *acc_bias.x, *acc_bias.y, *acc_bias.z, *gyro_bias.x, *gyro_bias.y, *gyro_bias.z);
 
 	while (1)
 	{
@@ -111,7 +113,8 @@ void StartImuTask(void *argument)
 		// printf("ID: 0x%02X Acceleration: %.2f %.2f %.2f Gyroscope: %.4f %.4f %.4f\n", id, *imu_data.acceleration.x, *imu_data.acceleration.y, *imu_data.acceleration.z, *imu_data.angular_velocity.x, *imu_data.angular_velocity.y, *imu_data.angular_velocity.z);
 
 		// Update the EKF with the IMU data
-		UpdateIMU(imu_data.acceleration, imu_data.angular_velocity);
+		UpdateAccelerometer(imu_data.acceleration);
+		UpdateGyroscope(imu_data.angular_velocity);
 
 		osDelay(100); // 100 Hz
 	}
@@ -206,7 +209,6 @@ void StartMagTask(void *argument)
 	hard_iron /= (float)samples;
 
 	// lis2mdl_mag_user_offset_set(&lis2mdl.Ctx, (int16_t)hard_iron.x, (int16_t)hard_iron.y, (int16_t)hard_iron.z);
-
 
 	while (1)
 	{

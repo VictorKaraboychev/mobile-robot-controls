@@ -1,21 +1,47 @@
 #include "control.h"
 
+#define KALMAN_STATE_SIZE 15
+
 // State transition function
 Vector f(const Vector &x, const Vector &u)
 {
 	float dt = u[0];
 	float dt2 = 0.5f * dt * dt;
 
+	float phi = x[3] + x[9] * dt;
+	float theta = x[4] + x[10] * dt;
+	float psi = x[5] + x[11] * dt;
+
+	// Constrain angles to [-π, π]
+	if (abs(phi) > M_PI)
+	{
+		phi -= copysignf(M_TWOPI, phi);
+	}
+	if (abs(theta) > M_PI)
+	{
+		theta -= copysignf(M_TWOPI, theta);
+	}
+	if (abs(psi) > M_PI)
+	{
+		psi -= copysignf(M_TWOPI, psi);
+	}
+
 	return Vector{
-		x[3] * dt + x[6] * dt2, // x = x + v_x * Δt + 0.5 * a_x * Δt^2
-		x[4] * dt + x[7] * dt2, // y = y + v_y * Δt + 0.5 * a_y * Δt^2
-		x[5] * dt + x[8] * dt2, // θ = θ + ω * Δt + 0.5 * α * Δt^2
-		x[6] * dt,				// v_x = v_x + a_x * Δt
-		x[7] * dt,				// v_y = v_y + a_y * Δt
-		x[8] * dt,				// ω = ω + α * Δt
-		0,						// a_x = a_x
-		0,						// a_y = a_y
-		0						// α = α
+		x[0] + x[6] * dt + x[12] * dt2, // x = x + x' * Δt + 0.5 * x'' * Δt^2
+		x[1] + x[7] * dt + x[13] * dt2, // y = y + y' * Δt + 0.5 * y'' * Δt^2
+		x[2] + x[8] * dt + x[14] * dt2, // z = z + z' * Δt + 0.5 * z'' * Δt^2
+		phi,							// φ = φ + φ' * Δt
+		theta,							// θ = θ + θ' * Δt
+		psi,							// ψ = ψ + ψ' * Δt
+		x[6] + x[12] * dt,				// x' = x' + x'' * Δt
+		x[7] + x[13] * dt,				// y' = y' + y'' * Δt
+		x[8] + x[14] * dt,				// z' = z' + z'' * Δt
+		x[9],							// φ' = φ'
+		x[10],							// θ' = θ'
+		x[11],							// ψ' = ψ'
+		x[12],							// x'' = x''
+		x[13],							// y'' = y''
+		x[14]							// z'' = z''
 	};
 }
 
@@ -25,113 +51,183 @@ Matrix F(const Vector &x, const Vector &u)
 	float dt = u[0];
 	float dt2 = 0.5f * dt * dt;
 
-	Matrix F = Matrix(9);
+	Matrix F = Matrix::Identity(KALMAN_STATE_SIZE);
 
-	// Update non-identity terms
-	F(0, 3) = dt;  // ∂x/∂vx
-	F(0, 6) = dt2; // ∂x/∂ax
+	F(0, 6) = dt;	// ∂x/∂x'
+	F(0, 12) = dt2; // ∂x/∂x''
 
-	F(1, 4) = dt;  // ∂y/∂vy
-	F(1, 7) = dt2; // ∂y/∂ay
+	F(1, 7) = dt;	// ∂y/∂y'
+	F(1, 13) = dt2; // ∂y/∂y''
 
-	F(2, 5) = dt;  // ∂θ/∂ω
-	F(2, 8) = dt2; // ∂θ/∂α
+	F(2, 8) = dt;	// ∂z/∂z'
+	F(2, 14) = dt2; // ∂z/∂z''
 
-	F(3, 6) = dt; // ∂vx/∂ax
-	F(4, 7) = dt; // ∂vy/∂ay
-	F(5, 8) = dt; // ∂ω/∂α
+	F(4, 10) = dt; // ∂φ/∂φ'
+
+	F(3, 9) = dt; // ∂θ/∂θ'
+
+	F(5, 11) = dt; // ∂ψ/∂ψ'
+
+	F(6, 12) = dt; // ∂x'/∂x''
+
+	F(7, 13) = dt; // ∂y'/∂y''
+
+	F(8, 14) = dt; // ∂z'/∂z''
 
 	return F;
 }
 
 // Process noise covariance
 Matrix Q = Matrix::Diagonal({
-	1.0e-3f, // x
-	1.0e-3f, // y
-	5.0e-4f, // θ
-	1.0e-4f, // v_x
-	1.0e-4f, // v_y
-	5.0e-5f, // ω
-	1.0e-5f, // a_x
-	1.0e-5f, // a_y
-	5.0e-6f	 // α
+	1.0e-3f, // x 0
+	1.0e-3f, // y 1
+	1.0e-3f, // z 2
+
+	5.0e-4f, // φ 3
+	5.0e-4f, // θ 4
+	5.0e-4f, // ψ 5
+
+	1.0e-4f, // x' 6
+	1.0e-4f, // y' 7
+	1.0e-4f, // z' 8
+
+	5.0e-5f, // φ' 9
+	5.0e-5f, // θ' 10
+	5.0e-5f, // ψ' 11
+
+	1.0e-5f, // x'' 12
+	1.0e-5f, // y'' 13
+	1.0e-5f, // z'' 14
 });
 
-// ---IMU (accelerometer and gyroscope)---
+// --- Accelerometer ---
 
 // Measurement function
-Vector h_imu(const Vector &x)
+Vector h_accelerometer(const Vector &x)
 {
-	float theta = x[2];
-	float s = sin(theta);
-	float c = cos(theta);
-
 	return Vector{
-		x[6] * c - x[7] * s, // a_x_body = a_x * cos(θ) - a_y * sin(θ)
-		x[6] * s + x[7] * c, // a_y_body = a_x * sin(θ) + a_y * cos(θ)
-		x[5]				 // ω
+		x[3], // φ (roll)
+		x[4], // θ (pitch)
+
+		x[12], // x''
+		x[13], // y''
+		x[14]  // z''
 	};
 }
 
 // Jacobian of measurement function
-Matrix H_imu(const Vector &x)
+Matrix H_accelerometer(const Vector &x)
 {
-	float theta = x[2];
-	float s = sin(theta);
-	float c = cos(theta);
+	Matrix H(5, KALMAN_STATE_SIZE);
 
-	Matrix H(3, 9);
+	H(0, 3) = 1; // ∂φ/∂φ
+	H(1, 4) = 1; // ∂θ/∂θ
 
-	H(0, 6) = c;					// ∂a_x_body/∂a_x
-	H(0, 7) = -s;					// ∂a_x_body/∂a_y
-	H(0, 2) = -x[6] * s - x[7] * c; // ∂a_x_body/∂θ
-
-	H(1, 6) = s;				   // ∂a_y_body/∂a_x
-	H(1, 7) = c;				   // ∂a_y_body/∂a_y
-	H(1, 2) = x[6] * c - x[7] * s; // ∂a_y_body/∂θ
-
-	H(2, 5) = 1; // ∂ω/∂w
+	H(2, 12) = 1; // ∂x''/∂x''
+	H(3, 13) = 1; // ∂y''/∂y''
+	H(4, 14) = 1; // ∂z''/∂z''
 
 	return H;
 }
 
 // Measurement noise covariance
+Matrix R_accelerometer = Matrix::Diagonal({5e-3f, 5e-3f, 1e-4f, 1e-4f, 1e-4f}); // acc_noise_density = 75 μg/√Hz (0.00073575 m/s^2/√Hz) ^ 2 / 1000 Hz
 
-// acc_noise_density = 75 μg/√Hz (0.00073575 m/s^2/√Hz) ^ 2 / 1000 Hz
-// gyro_noise_density = 0.0038 °/s/√Hz (0.000066 rad/s/√Hz) ^ 2 / 1000 Hz
-Matrix R_imu = Matrix::Diagonal({7.5e-4f, 7.5e-4f, 5.0e-5f});
-
-void UpdateIMU(const Vector &acceleration, const Vector &angular_velocity)
+void UpdateAccelerometer(const Vector &acceleration)
 {
+	// Rotate the acceleration vector to the world frame
+	Vector world_acceleration = Matrix::Rotation3D(robot.orientation) * acceleration;
+
+	// Subtract gravity from the z-axis
+	world_acceleration[2] += GRAVITY;
+
+	// Compute pitch and roll
+	float roll = atan2(*acceleration.y, -*acceleration.z);
+	float pitch = atan2(-*acceleration.x, hypot(*acceleration.y, *acceleration.z));
+
 	// Update the state vector
-	Vector z = Vector{*acceleration.x, *acceleration.y, *angular_velocity.z};
+	Vector z = Vector{roll, pitch, *world_acceleration.x, *world_acceleration.y, *world_acceleration.z};
 
 	// Update the state estimate
-	ekf.asyncUpdate(z, h_imu, H_imu, R_imu);
+	ekf.asyncUpdate(z, h_accelerometer, H_accelerometer, R_accelerometer);
+}
+
+// ---Gyroscope---
+
+// Measurement function
+Vector h_gyroscope(const Vector &x)
+{
+	return Vector{
+		x[9],  // θ' (pitch rate)
+		x[10], // φ' (roll rate)
+		x[11]  // ψ' (yaw rate)
+	};
+}
+
+// Jacobian of measurement function
+Matrix H_gyroscope(const Vector &x)
+{
+	Matrix H(3, KALMAN_STATE_SIZE);
+
+	H(0, 9) = 1;  // ∂θ'/∂θ'
+	H(1, 10) = 1; // ∂φ'/∂φ'
+	H(2, 11) = 1; // ∂ψ'/∂ψ'
+
+	return H;
+}
+
+// Measurement noise covariance
+Matrix R_gyroscope = Matrix::Diagonal({5.0e-5f, 5.0e-5f, 5.0e-5f}); // gyro_noise_density = 0.0038 °/s/√Hz (0.000066 rad/s/√Hz) ^ 2 / 1000 Hz
+
+void UpdateGyroscope(const Vector &angular_velocity)
+{
+	float s1 = sin(*robot.orientation.x);
+	float c1 = cos(*robot.orientation.x);
+
+	float c2 = cos(*robot.orientation.y);
+	float t2 = tan(*robot.orientation.y);
+
+	float p = *angular_velocity.x;
+	float q = *angular_velocity.y;
+	float r = *angular_velocity.z;
+
+	Vector world_angular_velocity = Vector{
+		p + (q * s1 + r * c1) * t2, // φ' = p + (q * s1 + r * c1) * t2
+		q * c1 - r * s1,			// θ' = q * c1 - r * s1
+		(q * s1 + r * c1) / c2		// ψ' = (q * s1 + r * c1) / c2
+	};
+
+	// Update the state vector
+	Vector z = Vector{*world_angular_velocity.x, *world_angular_velocity.y, *world_angular_velocity.z};
+
+	// z.print();
+
+	// Update the state estimate
+	ekf.asyncUpdate(z, h_gyroscope, H_gyroscope, R_gyroscope);
 }
 
 // ---Magnetometer---
 
 // Measurement function
-Vector h_mag(const Vector &x)
+Vector h_magnetometer(const Vector &x)
 {
 	return Vector{
-		x[2] // θ
+		x[5] // ψ
 	};
 }
 
 // Jacobian of measurement function
-Matrix H_mag(const Vector &x)
+Matrix H_magnetometer(const Vector &x)
 {
-	Matrix H(1, 9);
+	Matrix H(1, KALMAN_STATE_SIZE);
 
-	H(0, 2) = 1; // ∂θ/∂θ
+	H(0, 5) = 1; // ∂ψ/∂ψ
 
 	return H;
 }
 
 // Measurement noise covariance
-Matrix R_mag = Matrix::Diagonal({4.0e-4f});
+Matrix R_magnetometer = Matrix::Diagonal({4.0e-4f});
 
 void UpdateMagnetometer(const Vector &orientation)
 {
@@ -139,52 +235,51 @@ void UpdateMagnetometer(const Vector &orientation)
 	Vector z = Vector{*orientation.z};
 
 	// Update the state estimate
-	ekf.asyncUpdate(z, h_mag, H_mag, R_mag);
+	// ekf.asyncUpdate(z, h_magnetometer, H_magnetometer, R_magnetometer);
 }
 
 // ---Encoders---
 
 // Measurement function
-Vector h_enc(const Vector &x)
+Vector h_encoders(const Vector &x)
 {
-	float theta = x[2];
-	float s = sin(theta);
-	float c = cos(theta);
-
 	return Vector{
-		x[3] * c - x[4] * s, // v_fwd = v_x * cos(θ) - v_y * sin(θ)
-		x[5]				 // ω = ω
+		x[6], // x'
+		x[7], // y'
+		x[9]  // ψ'
 	};
 }
 
 // Jacobian of measurement function
-Matrix H_enc(const Vector &x)
+Matrix H_encoders(const Vector &x)
 {
-	float theta = x[2];
-	float s = sin(theta);
-	float c = cos(theta);
+	Matrix H(2, KALMAN_STATE_SIZE);
 
-	Matrix H(2, 9);
-
-	H(0, 3) = c;					// v_fwd/∂v_x
-	H(0, 4) = -s;					// v_fwd/∂v_y
-	H(0, 2) = -x[3] * s - x[4] * c; // v_fwd/∂θ
-
-	H(1, 5) = 1; // ∂ω/∂ω
+	H(0, 6) = 1; // ∂x'/∂x'
+	H(1, 7) = 1; // ∂y'/∂y'
+	H(2, 9) = 1; // ∂ψ'/∂ψ'
 
 	return H;
 }
 
 // Measurement noise covariance
-Matrix R_enc = Matrix::Diagonal({1.0e-4f, 2.5e-5f});
+Matrix R_encoders = Matrix::Diagonal({1.0e-4f, 2.5e-5f});
 
 void UpdateEncoders(const float &forward_velocity, const float &angular_velocity)
 {
+	// Compute x and y velocities
+	float theta = *robot.orientation.z;
+	float s = sin(theta);
+	float c = cos(theta);
+
+	float v_x = forward_velocity * c - forward_velocity * s;
+	float v_y = forward_velocity * s + forward_velocity * c;
+
 	// Update the state vector
-	Vector z = Vector{forward_velocity, angular_velocity};
+	Vector z = Vector{v_x, v_y, angular_velocity};
 
 	// Update the state estimate
-	ekf.asyncUpdate(z, h_enc, H_enc, R_enc);
+	// ekf.asyncUpdate(z, h_encoders, H_encoders, R_encoders);
 }
 
 ExtendedKalmanFilter ekf;
@@ -196,11 +291,14 @@ void StartFusionTask(void *argument)
 	ekf = ExtendedKalmanFilter(f, F, Q);
 
 	// Set the initial state
-	Vector x(9);
-	Matrix P = Matrix::Identity(9) * 0.01f;
+	Vector x(KALMAN_STATE_SIZE);
+	Matrix P = Matrix::Identity(KALMAN_STATE_SIZE) * 0.01f;
 	ekf.initialize(x, P);
 
+	osDelay(2000); // Wait for the sensors to initialize
+
 	uint64_t last_time = HAL_GetTick();
+	osDelay(10); // 100 Hz
 
 	while (true)
 	{
@@ -211,14 +309,14 @@ void StartFusionTask(void *argument)
 		ekf.predict(Vector{delta_time});
 
 		// Update the state from the state vector
-		Vector ekfState = ekf.getState();
+		Vector state = ekf.getState();
 
-		robot.position = ekfState.getSubVector(0, 1);
-		robot.orientation = ekfState[2];
-		robot.velocity = ekfState.getSubVector(3, 4);
-		robot.angular_velocity = ekfState[5];
-		robot.acceleration = ekfState.getSubVector(6, 7);
-		robot.angular_acceleration = ekfState[8];
+		robot.position = Vector{state[0], state[1], state[2]};
+		robot.velocity = Vector{state[6], state[7], state[8]};
+		robot.acceleration = Vector{state[12], state[13], state[14]};
+
+		robot.orientation = Vector{state[3], state[4], state[5]};
+		robot.angular_velocity = Vector{state[9], state[10], state[11]};
 
 		osDelay(10); // 100 Hz
 	}
@@ -231,7 +329,7 @@ void StartControlTask(void *argument)
 		Vector target = Vector({0, 0}); // GetTarget();
 
 		// Calculate the curvature
-		float curvature = calculateCurvature(robot.position, robot.orientation, target);
+		float curvature = 0; // calculateCurvature(robot.position, robot.orientation, target);
 
 		// Calculate the left and right wheel velocities
 		float left_velocity = TARGET_SPEED * (1 - curvature * WHEEL_DISTANCE / 2.0f);

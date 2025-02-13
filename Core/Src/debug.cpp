@@ -51,7 +51,7 @@ void StartDebugTask(void *argument)
 		float elapsed_time = (HAL_GetTick() - last_time) / 1000.0f;
 
 		// Print every 0.5s
-		if (elapsed_time > 0.05f && print_level <= PL_DEBUG)
+		if (elapsed_time >= 0.5f && print_level <= PL_DEBUG)
 		{
 			// printf("[DEBUG] IMU: %s, Magnetometer: %s, Encoders: %s\n",
 			// 	   imu_data.active ? "  ACTIVE" : "INACTIVE",
@@ -59,13 +59,12 @@ void StartDebugTask(void *argument)
 			// 	   encoders_data.active ? " ACTIVE" : "INACTIVE");
 
 			// Print robot state
-			printf("[DEBUG] Position: %.2f %.2f, Velocity: %.2f %.2f, Acceleration: %.2f %.2f, Orientation: %.2f, Angular Velocity: %.2f, Angular Acceleration: %.2f\n",
-				   *robot.position.x, *robot.position.y,
-				   *robot.velocity.x, *robot.velocity.y,
-				   *robot.acceleration.x, *robot.acceleration.y,
-				   robot.orientation * RAD_TO_DEG,
-				   robot.angular_velocity * RAD_TO_DEG,
-				   robot.angular_acceleration * RAD_TO_DEG);
+			printf("[DEBUG] s: %.2f %.2f %.2f, v: %.2f %.2f %.2f, a: %.2f %.2f %.2f, w: %.2f %.2f %.2f, w_v: %.2f %.2f %.2f\n",
+				   *robot.position.x, *robot.position.y, *robot.position.z,
+				   *robot.velocity.x, *robot.velocity.y, *robot.velocity.z,
+				   *robot.acceleration.x, *robot.acceleration.y, *robot.acceleration.z,
+				   *robot.orientation.x * RAD_TO_DEG, *robot.orientation.y * RAD_TO_DEG, *robot.orientation.z * RAD_TO_DEG,
+				   *robot.angular_velocity.x * RAD_TO_DEG, *robot.angular_velocity.y * RAD_TO_DEG, *robot.angular_velocity.z * RAD_TO_DEG);
 
 			last_time = HAL_GetTick();
 		}
