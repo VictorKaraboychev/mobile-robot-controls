@@ -51,7 +51,7 @@ Matrix F(const Vector &x, const Vector &u)
 	float dt = u[0];
 	float dt2 = 0.5f * dt * dt;
 
-	Matrix F = Matrix(KALMAN_STATE_SIZE);
+	Matrix F = Matrix::Identity(KALMAN_STATE_SIZE);
 
 	// F(0, 6) = dt;	// ∂x/∂x'
 	// F(0, 12) = dt2; // ∂x/∂x''

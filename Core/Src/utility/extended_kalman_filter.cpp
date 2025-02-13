@@ -55,7 +55,7 @@ void ExtendedKalmanFilter::predict(const Vector &u)
 	
 	// Predict the state estimate
 	this->_x = f;
-	this->_P += F * this->_P + this->_P * F.transpose() + this->_Q;
+	this->_P = F * this->_P * F.transpose() + this->_Q;
 }
 
 void ExtendedKalmanFilter::update(const Vector &z)
@@ -63,16 +63,13 @@ void ExtendedKalmanFilter::update(const Vector &z)
 	Vector h = this->_h(this->_x); // Measurement function
 	Matrix H = this->_H(this->_x); // Jacobian of measurement function
 	Matrix R = this->_R;		   // Measurement noise covariance
-	printf("Measurement Function\n");
 
 	// Calculate the Kalman gain
 	Matrix K = this->_P * H.transpose() * (H * this->_P * H.transpose() + R).inverse();
-	printf("Kalman Gain\n");
 
 	// Update the state estimate
 	this->_x += K * (z - h);
 	this->_P = (Matrix::Identity(this->_state_size) - K * H) * this->_P;
-	printf("State Estimate\n");
 }
 
 void ExtendedKalmanFilter::asyncUpdate(const Vector &z, Vector (*h)(const Vector &x), Matrix (*H)(const Vector &x), const Matrix &R)
