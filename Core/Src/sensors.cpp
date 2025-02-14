@@ -290,8 +290,8 @@ void StartEncodersTask(void *argument)
 		}
 
 		// Compute the encoder velocity
-		float left_velocity = (left->pulses - left->last_pulses) * (DISTANCE_PER_PULSE / delta_time);
-		float right_velocity = (right->pulses - right->last_pulses) * (DISTANCE_PER_PULSE / delta_time);
+		float left_velocity = delta_left * (DISTANCE_PER_PULSE / delta_time);
+		float right_velocity = delta_right * (DISTANCE_PER_PULSE / delta_time);
 
 		// Map the encoder data to the encoder data structure
 		encoders_data.velocity = (left_velocity + right_velocity) / 2.0f;

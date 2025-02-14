@@ -280,11 +280,9 @@ void UpdateEncoders(const float &forward_velocity, const float &angular_velocity
 {
 	// Compute x and y velocities
 	float theta = *robot.orientation.z;
-	float s = sin(theta);
-	float c = cos(theta);
 
-	float v_x = forward_velocity * c - forward_velocity * s;
-	float v_y = forward_velocity * s + forward_velocity * c;
+	float v_x = -forward_velocity * sin(theta);
+	float v_y = forward_velocity * cos(theta);
 
 	// Update the state vector
 	Vector z = Vector{v_x, v_y, angular_velocity};
