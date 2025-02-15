@@ -155,9 +155,7 @@ void UpdateAccelerometer(const Vector &acceleration)
 	*world_acceleration.z += GRAVITY;
 
 	// Update the state vector
-	Vector z = Vector(5); // Vector{*orientation.x, *orientation.y, *world_acceleration.x, *world_acceleration.y, *world_acceleration.z};
-
-	robot.orientation.print();
+	Vector z = Vector{*orientation.x, *orientation.y, *world_acceleration.x, *world_acceleration.y, *world_acceleration.z};
 
 	// Update the state estimate
 	ekf.asyncUpdate(z, h_accelerometer, H_accelerometer, R_accelerometer);
