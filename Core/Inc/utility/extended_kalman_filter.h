@@ -7,7 +7,6 @@
 class ExtendedKalmanFilter
 {
 public:
-	ExtendedKalmanFilter();
 	// Asynchronous communication
 	ExtendedKalmanFilter(Vector (*f)(const Vector &x, const Vector &u), Matrix (*F)(const Vector &x, const Vector &u), const Matrix &Q);
 	// Synchronous communication
@@ -40,6 +39,11 @@ private:
 	Vector (*_h)(const Vector &x); // Measurement function
 	Matrix (*_H)(const Vector &x); // Measurement Jacobian
 	Matrix _R;					   // Measurement noise covariance
+
+	// Temporary variables
+	Matrix _Fm; // State transition Jacobian
+	Matrix _Hm; // Measurement Jacobian
+	Matrix _K; // Kalman gain
 
 	Vector _x; // State estimate
 	Matrix _P; // Estimate covariance

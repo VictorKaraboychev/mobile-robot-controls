@@ -291,14 +291,11 @@ void UpdateEncoders(const float &forward_velocity, const float &angular_velocity
 	// ekf.asyncUpdate(z, h_encoders, H_encoders, R_encoders);
 }
 
-ExtendedKalmanFilter ekf;
+ExtendedKalmanFilter ekf = ExtendedKalmanFilter(f, F, Q);
 RobotState robot;
 
 void StartFusionTask(void *argument)
 {
-	// Create the Extended Kalman Filter
-	ekf = ExtendedKalmanFilter(f, F, Q);
-
 	// Set the initial state
 	Vector x(KALMAN_STATE_SIZE);
 	Matrix P = Matrix::Identity(KALMAN_STATE_SIZE) * 0.01f;

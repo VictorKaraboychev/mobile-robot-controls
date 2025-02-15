@@ -2,10 +2,6 @@
 
 // ExtendedKalmanFilter class implementation
 
-ExtendedKalmanFilter::ExtendedKalmanFilter()
-{
-}
-
 ExtendedKalmanFilter::ExtendedKalmanFilter(Vector (*f)(const Vector &x, const Vector &u), Matrix (*F)(const Vector &x, const Vector &u), const Matrix &Q)
 {
 	this->_f = f;
@@ -50,26 +46,23 @@ void ExtendedKalmanFilter::initialize(const Vector &x, const Matrix &P)
 
 void ExtendedKalmanFilter::predict(const Vector &u)
 {
-	Vector f = this->_f(this->_x, u); // State transition function
-	Matrix F = this->_F(this->_x, u); // Jacobian of state transition function
+	this->_Fm = this->_F(this->_x, u); // Jacobian of state transition function
 	
 	// Predict the state estimate
-	this->_x = f;
-	this->_P = F * this->_P * F.transpose() + this->_Q;
+	this->_x = this->_f(this->_x, u);
+	this->_P = _Fm * this->_P * _Fm.transpose() + this->_Q;
 }
 
 void ExtendedKalmanFilter::update(const Vector &z)
 {
-	Vector h = this->_h(this->_x); // Measurement function
-	Matrix H = this->_H(this->_x); // Jacobian of measurement function
-	Matrix R = this->_R;		   // Measurement noise covariance
+	this->_Hm = this->_H(this->_x); // Jacobian of measurement function
 
 	// Calculate the Kalman gain
-	Matrix K = this->_P * H.transpose() * (H * this->_P * H.transpose() + R).inverse();
+	this->_K = this->_P * _Hm.transpose() * (_Hm * this->_P * _Hm.transpose() + this->_R).inverse();
 
 	// Update the state estimate
-	this->_x += K * (z - h);
-	this->_P = (Matrix::Identity(this->_state_size) - K * H) * this->_P;
+	this->_x += _K * (z - this->_h(this->_x));
+	this->_P = (Matrix::Identity(this->_state_size) - _K * _Hm) * this->_P;
 }
 
 void ExtendedKalmanFilter::asyncUpdate(const Vector &z, Vector (*h)(const Vector &x), Matrix (*H)(const Vector &x), const Matrix &R)
