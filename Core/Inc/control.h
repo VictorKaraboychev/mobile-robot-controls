@@ -6,7 +6,7 @@
 
 #include <Eigen/Dense>
 #include "extended_kalman_filter.h"
-// #include "pure_pursuit.h"
+#include "pure_pursuit.h"
 
 #include "sensors.h"
 

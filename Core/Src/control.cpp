@@ -344,7 +344,7 @@ void StartFusionTask(void *argument)
 		last_time = HAL_GetTick();
 
 		// Create the control vector
-		EKF::ControlVector u(KALMAN_CONTROL_SIZE);
+		EKF::ControlVector u {delta_time};
 
 		// Predict the state
 		ekf.predict(u);
@@ -368,24 +368,24 @@ void StartControlTask(void *argument)
 	while (true)
 	{
 
-		// Vector target = Vector({0, 0}); // GetTarget();
+		Eigen::Vector2f target{0, 0}; // GetTarget();
 
-		// // Calculate the curvature
-		// float curvature = 0; // calculateCurvature(robot.position, robot.orientation, target);
+		// Calculate the curvature
+		float curvature = PurePursuit<float>::CalculateCurvature(robot.position, robot.orientation[2], target);
 
-		// // Calculate the left and right wheel velocities
-		// float left_velocity = TARGET_SPEED * (1 - curvature * WHEEL_DISTANCE / 2.0f);
-		// float right_velocity = TARGET_SPEED * (1 + curvature * WHEEL_DISTANCE / 2.0f);
+		// Calculate the left and right wheel velocities
+		float left_velocity = TARGET_SPEED * (1 - curvature * WHEEL_DISTANCE / 2.0f);
+		float right_velocity = TARGET_SPEED * (1 + curvature * WHEEL_DISTANCE / 2.0f);
 
-		// // Limit the wheel velocities to the maximum speed
-		// float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
+		// Limit the wheel velocities to the maximum speed
+		float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
 
-		// // If the maximum velocity is greater than the maximum speed (maintain the ratio)
-		// if (max_velocity > MAX_SPEED)
-		// {
-		// 	left_velocity *= MAX_SPEED / max_velocity;
-		// 	right_velocity *= MAX_SPEED / max_velocity;
-		// }
+		// If the maximum velocity is greater than the maximum speed (maintain the ratio)
+		if (max_velocity > MAX_SPEED)
+		{
+			left_velocity *= MAX_SPEED / max_velocity;
+			right_velocity *= MAX_SPEED / max_velocity;
+		}
 
 		osDelay(10); // 100 Hz
 	}
