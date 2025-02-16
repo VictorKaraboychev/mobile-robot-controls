@@ -6,8 +6,12 @@
 
 #include "tim.h"
 
-#include "sensors.h"
 #include "control.h"
+
+#include "barometer.h"
+#include "encoders.h"
+#include "imu.h"
+#include "magnetometer.h"
 
 #include <stdio.h>
 

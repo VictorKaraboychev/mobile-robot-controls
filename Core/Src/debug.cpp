@@ -55,7 +55,7 @@ void StartDebugTask(void *argument)
 		{
 			// printf("[DEBUG] IMU: %s, Magnetometer: %s, Encoders: %s\n",
 			// 	   imu_data.active ? "  ACTIVE" : "INACTIVE",
-			// 	   mag_data.active ? " ACTIVE" : "INACTIVE",
+			// 	   magnetometer_data.active ? " ACTIVE" : "INACTIVE",
 			// 	   encoders_data.active ? " ACTIVE" : "INACTIVE");
 
 			// Print robot state
@@ -70,7 +70,7 @@ void StartDebugTask(void *argument)
 		}
 
 		// Check if all sensors are active
-		all_sensors_active = imu_data.active && mag_data.active && encoders_data.active;
+		all_sensors_active = accelerometer_data.active && magnetometer_data.active && encoders_data.active;
 
 		if (all_sensors_active)
 		{
@@ -80,11 +80,11 @@ void StartDebugTask(void *argument)
 		{
 			setPWM(GREEN_LED1, OFF_BRIGHTNESS);
 
-			if (!imu_data.active) // If the IMU is not active
+			if (!accelerometer_data.active) // If the IMU is not active
 			{
 				setPWM(RED_LED1, MEDIUM_BRIGHTNESS, BLINK_1);
 			}
-			else if (!mag_data.active) // If the magnetometer is not active
+			else if (!magnetometer_data.active) // If the magnetometer is not active
 			{
 				setPWM(RED_LED1, MEDIUM_BRIGHTNESS, BLINK_2);
 			}

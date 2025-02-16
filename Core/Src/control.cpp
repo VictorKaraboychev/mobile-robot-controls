@@ -98,230 +98,8 @@ EKF::ProcessCovariance Q = Eigen::DiagonalMatrix<float, KALMAN_STATE_SIZE>{
 	1.0e-5f, // z'' 14
 };
 
-// --- Accelerometer ---
-
-// Measurement function
-EKF::MeasurementVector h_accelerometer(const EKF::StateVector &x)
-{
-	EKF::MeasurementVector v(KALMAN_ACCELEROMETER_MEASUREMENT_SIZE);
-
-	v << x[3], // φ (roll)
-		x[4],  // θ (pitch)
-		x[12], // x''
-		x[13], // y''
-		x[14]; // z''
-
-	return v;
-}
-
-// Jacobian of measurement function
-EKF::MeasurementJacobian H_accelerometer(const EKF::StateVector &x)
-{
-	EKF::MeasurementJacobian H(KALMAN_ACCELEROMETER_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
-
-	H(0, 3) = 1; // ∂φ/∂φ
-	H(1, 4) = 1; // ∂θ/∂θ
-
-	H(2, 12) = 1; // ∂x''/∂x''
-	H(3, 13) = 1; // ∂y''/∂y''
-	H(4, 14) = 1; // ∂z''/∂z''
-
-	return H;
-}
-
-// Measurement noise covariance
-EKF::MeasurementCovariance R_accelerometer = Eigen::DiagonalMatrix<float, KALMAN_ACCELEROMETER_MEASUREMENT_SIZE>{
-	5e-3f, // φ (roll)
-	5e-3f, // θ (pitch)
-	1e-4f, // x''
-	1e-4f, // y''
-	1e-4f  // z''
-};
-
-Eigen::Quaternionf euler2Quaternion(const float roll, const float pitch, const float yaw)
-{
-	Eigen::AngleAxisf rollAngle(roll, Eigen::Vector3f::UnitX());
-	Eigen::AngleAxisf pitchAngle(pitch, Eigen::Vector3f::UnitY());
-	Eigen::AngleAxisf yawAngle(yaw, Eigen::Vector3f::UnitZ());
-
-	Eigen::Quaternionf q = rollAngle * pitchAngle * yawAngle;
-	return q;
-}
-
-void UpdateAccelerometer(const Eigen::Vector3f &acceleration)
-{
-	// Magnitude of the acceleration vector
-	float magnitude = acceleration.norm();
-
-	// Compute pitch and roll
-	Eigen::Vector3f orientation = robot.orientation;
-
-	// If the magnitude of the acceleration vector is close to gravity, the pitch and roll angles can be calculated using the accelerometer
-	if (abs(magnitude - GRAVITY) < 0.1f)
-	{
-		orientation[0] = atan2(acceleration[1], -acceleration[2]);
-		orientation[1] = atan2(-acceleration[0], hypot(acceleration[1], acceleration[2]));
-	}
-
-	// Rotate the acceleration vector to the world frame
-	Eigen::Quaternionf q = euler2Quaternion(orientation[0], orientation[1], orientation[2]);
-
-	Eigen::Vector3f world_acceleration = q.matrix() * acceleration;
-
-	// Subtract gravity from the z-axis
-	world_acceleration[2] += GRAVITY;
-
-	// Update the state vector
-	EKF::MeasurementVector z(KALMAN_ACCELEROMETER_MEASUREMENT_SIZE);
-	z << orientation[0], orientation[1], world_acceleration[0], world_acceleration[1], world_acceleration[2];
-
-	// Update the state estimate
-	ekf.asyncUpdate(z, h_accelerometer, H_accelerometer, R_accelerometer);
-}
-
-// ---Gyroscope---
-
-// Measurement function
-EKF::MeasurementVector h_gyroscope(const EKF::StateVector &x)
-{
-	EKF::MeasurementVector h(KALMAN_GYROSCOPE_MEASUREMENT_SIZE);
-
-	h << x[9], // φ' (roll rate)
-		x[10], // θ' (pitch rate)
-		x[11]; // ψ' (yaw rate)
-
-	return h;
-}
-
-// Jacobian of measurement function
-EKF::MeasurementJacobian H_gyroscope(const EKF::StateVector &x)
-{
-	EKF::MeasurementJacobian H(KALMAN_GYROSCOPE_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
-
-	H(0, 9) = 1;  // ∂φ'/∂φ'
-	H(1, 10) = 1; // ∂θ'/∂θ'
-	H(2, 11) = 1; // ∂ψ'/∂ψ'
-
-	return H;
-}
-
-// Measurement noise covariance
-EKF::MeasurementCovariance R_gyroscope = Eigen::DiagonalMatrix<float, KALMAN_GYROSCOPE_MEASUREMENT_SIZE>{
-	5.0e-5f, // φ' (roll rate)
-	5.0e-5f, // θ' (pitch rate)
-	5.0e-5f	 // ψ' (yaw rate)
-};
-
-void UpdateGyroscope(const Eigen::Vector3f &angular_velocity)
-{
-	// float s1 = sin(*robot.orientation.x);
-	// float c1 = cos(*robot.orientation.x);
-
-	// float c2 = cos(*robot.orientation.y);
-	// float t2 = tan(*robot.orientation.y);
-
-	// float p = *angular_velocity.x;
-	// float q = *angular_velocity.y;
-	// float r = *angular_velocity.z;
-
-	// Vector world_angular_velocity = Vector{
-	// 	p + (q * s1 + r * c1) * t2, // φ' = p + (q * s1 + r * c1) * t2
-	// 	q * c1 - r * s1,			// θ' = q * c1 - r * s1
-	// 	(q * s1 + r * c1) / c2		// ψ' = (q * s1 + r * c1) / c2
-	// };
-
-	// Update the state vector
-	// EKF::MeasurementVector z(KALMAN_GYROSCOPE_MEASUREMENT_SIZE);
-
-	// Update the state estimate
-	// ekf.asyncUpdate(z, h_gyroscope, H_gyroscope, R_gyroscope);
-}
-
-// ---Magnetometer---
-
-// Measurement function
-EKF::MeasurementVector h_magnetometer(const EKF::StateVector &x)
-{
-	EKF::MeasurementVector v(KALMAN_MAGNETOMETER_MEASUREMENT_SIZE);
-
-	v << x[5]; // ψ (yaw)
-
-	return v;
-}
-
-// Jacobian of measurement function
-EKF::MeasurementJacobian H_magnetometer(const EKF::StateVector &x)
-{
-	EKF::MeasurementJacobian H(KALMAN_MAGNETOMETER_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
-
-	H(0, 5) = 1; // ∂ψ/∂ψ
-
-	return H;
-}
-
-// Measurement noise covariance
-EKF::MeasurementCovariance R_magnetometer = Eigen::DiagonalMatrix<float, KALMAN_MAGNETOMETER_MEASUREMENT_SIZE>{{
-	1.0e-4f // ψ (yaw)
-}};
-
-void UpdateMagnetometer(const Eigen::Vector3f &orientation)
-{
-	// Update the state vector
-	EKF::MeasurementVector z(KALMAN_MAGNETOMETER_MEASUREMENT_SIZE);
-	z << orientation[2]; // ψ (yaw)
-
-	// Update the state estimate
-	// ekf.asyncUpdate(z, h_magnetometer, H_magnetometer, R_magnetometer);
-}
-
-// ---Encoders---
-
-// Measurement function
-EKF::MeasurementVector h_encoders(const EKF::StateVector &x)
-{
-	EKF::MeasurementVector v(KALMAN_ENCODERS_MEASUREMENT_SIZE);
-
-	v << x[6], // x'
-		x[7],  // y'
-		x[9];  // ψ'
-
-	return v;
-}
-
-// Jacobian of measurement function
-EKF::MeasurementJacobian H_encoders(const EKF::StateVector &x)
-{
-	EKF::MeasurementJacobian H(KALMAN_ENCODERS_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
-
-	H(0, 6) = 1; // ∂x'/∂x'
-	H(1, 7) = 1; // ∂y'/∂y'
-	H(2, 9) = 1; // ∂ψ'/∂ψ'
-
-	return H;
-}
-
-// Measurement noise covariance
-EKF::MeasurementCovariance R_encoders = Eigen::DiagonalMatrix<float, KALMAN_ENCODERS_MEASUREMENT_SIZE>{
-	1.0e-4f, // x'
-	1.0e-4f, // y'
-	2.5e-5f	 // ψ' (yaw rate)
-};
-
-void UpdateEncoders(const float &forward_velocity, const float &angular_velocity)
-{
-	// Compute x and y velocities
-	float theta = robot.orientation[2];
-
-	float v_x = -forward_velocity * sin(theta);
-	float v_y = forward_velocity * cos(theta);
-
-	// Update the state vector
-	EKF::MeasurementVector z(KALMAN_ENCODERS_MEASUREMENT_SIZE);
-	z << v_x, v_y, angular_velocity;
-
-	// Update the state estimate
-	// ekf.asyncUpdate(z, h_encoders, H_encoders, R_encoders);
-}
+// Sensors
+Sensor* sensors[SENSOR_COUNT] = {&accelerometer, &gyroscope, &magnetometer, &barometer, &encoders};
 
 EKF ekf(f, F, Q);
 RobotState robot;
@@ -344,20 +122,40 @@ void StartFusionTask(void *argument)
 		last_time = HAL_GetTick();
 
 		// Create the control vector
-		EKF::ControlVector u {delta_time};
+		EKF::ControlVector u{delta_time};
 
 		// Predict the state
 		ekf.predict(u);
 
 		// Update the state from the state vector
-		EKF::StateVector state = ekf.getState();
+		x = ekf.getState();
 
-		robot.position = Eigen::Vector3f{state[0], state[1], state[2]};
-		robot.velocity = Eigen::Vector3f{state[6], state[7], state[8]};
-		robot.acceleration = Eigen::Vector3f{state[12], state[13], state[14]};
+		// Check all sensors for updates
+		for (int i = 0; i < SENSOR_COUNT; i++)
+		{
+			if (sensors[i]->measurement_ready())
+			{
+				// Update the measurement functions and covariance
+				ekf.setMeasurement(sensors[i]->measurement_function, sensors[i]->measurement_jacobian_function, sensors[i]->measurement_covariance);
 
-		robot.orientation = Eigen::Vector3f{state[3], state[4], state[5]};
-		robot.angular_velocity = Eigen::Vector3f{state[9], state[10], state[11]};
+				// Get the measurement vector
+				EKF::MeasurementVector z = sensors[i]->measurement(x);
+
+				// Update the state estimate
+				ekf.update(z);
+			}
+		}
+
+		// Get the state vector
+		x = ekf.getState();
+
+		// Update the robot state
+		robot.position = Eigen::Vector3f{x[0], x[1], x[2]};
+		robot.velocity = Eigen::Vector3f{x[6], x[7], x[8]};
+		robot.acceleration = Eigen::Vector3f{x[12], x[13], x[14]};
+
+		robot.orientation = Eigen::Vector3f{x[3], x[4], x[5]};
+		robot.angular_velocity = Eigen::Vector3f{x[9], x[10], x[11]};
 
 		osDelay(10); // 100 Hz
 	}
