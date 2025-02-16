@@ -60,11 +60,11 @@ void StartDebugTask(void *argument)
 
 			// Print robot state
 			printf("[DEBUG] s: %.2f %.2f %.2f, v: %.2f %.2f %.2f, a: %.2f %.2f %.2f, w: %.2f %.2f %.2f, w_v: %.2f %.2f %.2f\n",
-				   *robot.position.x, *robot.position.y, *robot.position.z,
-				   *robot.velocity.x, *robot.velocity.y, *robot.velocity.z,
-				   *robot.acceleration.x, *robot.acceleration.y, *robot.acceleration.z,
-				   *robot.orientation.x * RAD_TO_DEG, *robot.orientation.y * RAD_TO_DEG, *robot.orientation.z * RAD_TO_DEG,
-				   *robot.angular_velocity.x * RAD_TO_DEG, *robot.angular_velocity.y * RAD_TO_DEG, *robot.angular_velocity.z * RAD_TO_DEG);
+				   robot.position[0], robot.position[1], robot.position[2],
+				   robot.velocity[0], robot.velocity[1], robot.velocity[2],
+				   robot.acceleration[0], robot.acceleration[1], robot.acceleration[2],
+				   robot.orientation[0] * RAD_TO_DEG, robot.orientation[1] * RAD_TO_DEG, robot.orientation[2] * RAD_TO_DEG,
+				   robot.angular_velocity[0] * RAD_TO_DEG, robot.angular_velocity[1] * RAD_TO_DEG, robot.angular_velocity[2] * RAD_TO_DEG);
 
 			last_time = HAL_GetTick();
 		}

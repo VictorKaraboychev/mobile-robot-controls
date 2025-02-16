@@ -7,8 +7,7 @@
 #include "spi.h"
 #include "usart.h"
 
-#include "utility/vector.h"
-#include "utility/matrix.h"
+#include <Eigen/Dense>
 
 #include "lsm6dso.h"
 #include "lis2mdl.h"
@@ -28,8 +27,8 @@
 // ---IMU---
 struct IMUData
 {
-	Vector acceleration;	 // x, y, z (m/s^2)
-	Vector angular_velocity; // p, q, r (rad/s)
+	Eigen::Vector3f acceleration;	 // x, y, z (m/s^2)
+	Eigen::Vector3f angular_velocity; // p, q, r (rad/s)
 
 	bool active;
 };
@@ -41,7 +40,7 @@ void StartIMUTask(void *argument);
 // ---Magnetometer---
 struct MagData
 {
-	Vector magnetic_orientation; // x, y, z (rad)
+	Eigen::Vector3f magnetic_orientation; // x, y, z (rad)
 
 	bool active;
 };

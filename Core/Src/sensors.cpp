@@ -68,15 +68,15 @@ void StartImuTask(void *argument)
 
 	// Calibrate the IMU
 	uint16_t samples = 1000;
-	Vector acc_bias(3), gyro_bias(3);
+	Eigen::Vector3f acc_bias, gyro_bias;
 
 	for (uint16_t i = 0; i < samples; i++)
 	{
 		LSM6DSO_ACC_GetAxes(&lsm6dso, &acc);
 		LSM6DSO_GYRO_GetAxes(&lsm6dso, &gyro);
 
-		acc_bias += -Vector{(float)acc.x, (float)acc.y, (float)acc.z};
-		gyro_bias += Vector{(float)gyro.x, (float)gyro.y, (float)gyro.z};
+		acc_bias += Eigen::Vector3f{(float)acc.x, (float)acc.y, (float)acc.z};
+		gyro_bias += Eigen::Vector3f{(float)gyro.x, (float)gyro.y, (float)gyro.z};
 
 		osDelay(2);
 	}
@@ -84,9 +84,9 @@ void StartImuTask(void *argument)
 	acc_bias *= (acc_scale / (float)samples);
 	gyro_bias *= (gyro_scale / (float)samples);
 
-	*acc_bias.z += GRAVITY; // Subtract gravity from the z-axis
+	acc_bias[2] += GRAVITY; // Subtract gravity from the z-axis
 
-	printf("Accelerometer Bias: %.2f %.2f %.2f Gyroscope Bias: %.4f %.4f %.4f\n", *acc_bias.x, *acc_bias.y, *acc_bias.z, *gyro_bias.x, *gyro_bias.y, *gyro_bias.z);
+	printf("Accelerometer Bias: %.2f %.2f %.2f Gyroscope Bias: %.4f %.4f %.4f\n", acc_bias[0], acc_bias[1], acc_bias[2], gyro_bias[0], gyro_bias[1], gyro_bias[2]);
 
 	while (1)
 	{
@@ -105,8 +105,8 @@ void StartImuTask(void *argument)
 		}
 
 		// Map the IMU data to the IMU data structure
-		imu_data.acceleration = -Vector{(float)acc.x, (float)acc.y, (float)acc.z} * acc_scale - acc_bias;
-		imu_data.angular_velocity = Vector{(float)gyro.x, (float)gyro.y, (float)gyro.z} * gyro_scale - gyro_bias;
+		imu_data.acceleration = -(Eigen::Vector3f{(float)acc.x, (float)acc.y, (float)acc.z} * acc_scale - acc_bias);
+		imu_data.angular_velocity = Eigen::Vector3f{(float)gyro.x, (float)gyro.y, (float)gyro.z} * gyro_scale - gyro_bias;
 
 		imu_data.active = true;
 
@@ -186,8 +186,8 @@ void StartMagTask(void *argument)
 	// Calibrate the magnetometer
 	uint16_t samples = 1000;
 
-	Matrix soft_iron(3, 3);
-	Vector hard_iron(3);
+	Eigen::Matrix3f soft_iron;
+	Eigen::Vector3f hard_iron;
 
 	for (uint16_t i = 0; i < samples; i++)
 	{
@@ -200,7 +200,7 @@ void StartMagTask(void *argument)
 		soft_iron(1, 2) += mag.y * mag.z;
 		soft_iron(2, 2) += mag.z * mag.z;
 
-		hard_iron += Vector{(float)mag.x, (float)mag.y, (float)mag.z};
+		hard_iron += Eigen::Vector3f{(float)mag.x, (float)mag.y, (float)mag.z};
 
 		osDelay(5);
 	}
@@ -231,7 +231,7 @@ void StartMagTask(void *argument)
 		pitch = atan2(-mag.x, hypot(mag.y, mag.z));
 		yaw = atan2(mag.z, mag.x);
 
-		mag_data.magnetic_orientation = Vector{roll, pitch, yaw};
+		mag_data.magnetic_orientation = Eigen::Vector3f{roll, pitch, yaw};
 
 		mag_data.active = true;
 
