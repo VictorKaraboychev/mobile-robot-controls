@@ -367,11 +367,11 @@ void StartControlTask(void *argument)
 {
 	while (true)
 	{
-
+		Eigen::Vector2f position = robot.position.head<2>();
 		Eigen::Vector2f target{0, 0}; // GetTarget();
 
 		// Calculate the curvature
-		float curvature = PurePursuit<float>::CalculateCurvature(robot.position, robot.orientation[2], target);
+		float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2], target);
 
 		// Calculate the left and right wheel velocities
 		float left_velocity = TARGET_SPEED * (1 - curvature * WHEEL_DISTANCE / 2.0f);

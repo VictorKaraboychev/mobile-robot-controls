@@ -75,7 +75,7 @@ void StartImuTask(void *argument)
 		LSM6DSO_ACC_GetAxes(&lsm6dso, &acc);
 		LSM6DSO_GYRO_GetAxes(&lsm6dso, &gyro);
 
-		acc_bias += Eigen::Vector3f{(float)acc.x, (float)acc.y, (float)acc.z};
+		acc_bias += -Eigen::Vector3f{(float)acc.x, (float)acc.y, (float)acc.z};
 		gyro_bias += Eigen::Vector3f{(float)gyro.x, (float)gyro.y, (float)gyro.z};
 
 		osDelay(2);
@@ -105,7 +105,7 @@ void StartImuTask(void *argument)
 		}
 
 		// Map the IMU data to the IMU data structure
-		imu_data.acceleration = -(Eigen::Vector3f{(float)acc.x, (float)acc.y, (float)acc.z} * acc_scale - acc_bias);
+		imu_data.acceleration = -Eigen::Vector3f{(float)acc.x, (float)acc.y, (float)acc.z} * acc_scale - acc_bias;
 		imu_data.angular_velocity = Eigen::Vector3f{(float)gyro.x, (float)gyro.y, (float)gyro.z} * gyro_scale - gyro_bias;
 
 		imu_data.active = true;

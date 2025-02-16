@@ -81,7 +81,7 @@ const osThreadAttr_t encodersTask_attributes = {
 osThreadId_t fusionTaskHandle;
 const osThreadAttr_t fusionTask_attributes = {
     .name = "fusionTask",
-    .stack_size = 1024 * 4,
+    .stack_size = 4096 * 4,
     .priority = (osPriority_t)osPriorityNormal,
 };
 /* Definitions for debugTask */
