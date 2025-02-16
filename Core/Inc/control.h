@@ -20,18 +20,18 @@
 #define KALMAN_BAROMETER_MEASUREMENT_SIZE 1
 #define KALMAN_ENCODERS_MEASUREMENT_SIZE 3
 
-#define SENSOR_COUNT 5
+#define SENSOR_COUNT 2
 
 using EKF = ExtendedKalmanFilter<float, KALMAN_STATE_SIZE, KALMAN_CONTROL_SIZE>;
 
 struct Sensor
 {
-	EKF::MeasurementFunc measurement_function;
-	EKF::MeasurementJacobianFunc measurement_jacobian_function;
-	EKF::MeasurementCovariance measurement_covariance;
+	EKF::MeasurementFunc h;
+	EKF::MeasurementJacobianFunc H;
+	EKF::MeasurementCovariance R;
 
-	EKF::MeasurementFunc measurement;
-	std::function<bool()> measurement_ready;
+	EKF::MeasurementFunc z;
+	std::function<bool()> ready;
 };
 
 #include "barometer.h"

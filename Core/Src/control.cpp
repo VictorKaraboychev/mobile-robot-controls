@@ -99,7 +99,7 @@ EKF::ProcessCovariance Q = Eigen::DiagonalMatrix<float, KALMAN_STATE_SIZE>{
 };
 
 // Sensors
-Sensor* sensors[SENSOR_COUNT] = {&accelerometer, &gyroscope, &magnetometer, &barometer, &encoders};
+Sensor *sensors[SENSOR_COUNT] = {&accelerometer, &barometer};
 
 EKF ekf(f, F, Q);
 RobotState robot;
@@ -133,13 +133,14 @@ void StartFusionTask(void *argument)
 		// Check all sensors for updates
 		for (int i = 0; i < SENSOR_COUNT; i++)
 		{
-			if (sensors[i]->measurement_ready())
+			Sensor *s = sensors[i];
+			if (s->ready())
 			{
 				// Update the measurement functions and covariance
-				ekf.setMeasurement(sensors[i]->measurement_function, sensors[i]->measurement_jacobian_function, sensors[i]->measurement_covariance);
+				ekf.setMeasurement(s->h, s->H, s->R);
 
 				// Get the measurement vector
-				EKF::MeasurementVector z = sensors[i]->measurement(x);
+				EKF::MeasurementVector z = s->z(x);
 
 				// Update the state estimate
 				ekf.update(z);
@@ -157,7 +158,7 @@ void StartFusionTask(void *argument)
 		robot.orientation = Eigen::Vector3f{x[3], x[4], x[5]};
 		robot.angular_velocity = Eigen::Vector3f{x[9], x[10], x[11]};
 
-		osDelay(10); // 100 Hz
+		osDelay(4); // 250 Hz
 	}
 }
 

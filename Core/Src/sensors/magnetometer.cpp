@@ -140,7 +140,7 @@ EKF::MeasurementVector h_magnetometer(const EKF::StateVector &x)
 // Jacobian of measurement function
 EKF::MeasurementJacobian H_magnetometer(const EKF::StateVector &x)
 {
-	EKF::MeasurementJacobian H(KALMAN_MAGNETOMETER_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
+	EKF::MeasurementJacobian H = EKF::MeasurementJacobian::Zero(KALMAN_MAGNETOMETER_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
 
 	H(0, 5) = 1; // ∂ψ/∂ψ
 
@@ -170,8 +170,8 @@ bool magnetometerDataReady()
 }
 
 Sensor magnetometer = {
-	.measurement_function = h_magnetometer,
-	.measurement_jacobian_function = H_magnetometer,
-	.measurement_covariance = R_magnetometer,
-	.measurement = magnetometerMeasurement,
-	.measurement_ready = magnetometerDataReady};
+	.h = h_magnetometer,
+	.H = H_magnetometer,
+	.R = R_magnetometer,
+	.z = magnetometerMeasurement,
+	.ready = magnetometerDataReady};

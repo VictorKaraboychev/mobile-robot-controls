@@ -82,7 +82,7 @@ EKF::MeasurementVector h_encoders(const EKF::StateVector &x)
 // Jacobian of measurement function
 EKF::MeasurementJacobian H_encoders(const EKF::StateVector &x)
 {
-	EKF::MeasurementJacobian H(KALMAN_ENCODERS_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
+	EKF::MeasurementJacobian H = EKF::MeasurementJacobian::Zero(KALMAN_ENCODERS_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
 
 	H(0, 6) = 1; // ∂x'/∂x'
 	H(1, 7) = 1; // ∂y'/∂y'
@@ -123,8 +123,8 @@ bool encodersDataReady()
 }
 
 Sensor encoders = {
-	.measurement_function = h_encoders,
-	.measurement_jacobian_function = H_encoders,
-	.measurement_covariance = R_encoders,
-	.measurement = encodersMeasurement,
-	.measurement_ready = encodersDataReady};
+	.h = h_encoders,
+	.H = H_encoders,
+	.R = R_encoders,
+	.z = encodersMeasurement,
+	.ready = encodersDataReady};

@@ -63,6 +63,8 @@ public:
 	StateVector getState() const;
 
 private:
+	using KalmanGain = Eigen::Matrix<DataType, StateDim, MeasurementDim>;
+
 	// Process model.
 	ProcessFunc _f;
 	ProcessJacobianFunc _F;
@@ -135,8 +137,7 @@ void ExtendedKalmanFilter<DataType, StateDim, ControlDim, MeasurementDim>::updat
 	MeasurementCovariance S = H_val * this->P * H_val.transpose() + _R;
 
 	// Compute the Kalman gain: K = P * H' * S⁻¹.
-	// K has dimensions (StateDim x measurement dimension).
-	Eigen::Matrix<DataType, StateDim, MeasurementDim> K = this->P * H_val.transpose() * S.inverse();
+	KalmanGain K = this->P * H_val.transpose() * S.inverse();
 
 	// Update the state estimate.
 	this->x += K * (z - h_val);

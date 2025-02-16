@@ -102,7 +102,7 @@ void StartBarometerTask(void *argument)
 		barometer_data.active = true;
 		barometer_data.data_ready = true;
 
-		osDelay(10);
+		osDelay(5); // 200 Hz
 	}
 }
 
@@ -119,7 +119,7 @@ EKF::MeasurementVector h_barometer(const EKF::StateVector &x)
 // Jacobian of measurement function
 EKF::MeasurementJacobian H_barometer(const EKF::StateVector &x)
 {
-	EKF::MeasurementJacobian H(KALMAN_BAROMETER_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
+	EKF::MeasurementJacobian H = EKF::MeasurementJacobian::Zero(KALMAN_BAROMETER_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
 
 	H(0, 2) = 1; // ∂z/∂z
 
@@ -128,7 +128,7 @@ EKF::MeasurementJacobian H_barometer(const EKF::StateVector &x)
 
 // Measurement noise covariance
 EKF::MeasurementCovariance R_barometer = Eigen::DiagonalMatrix<float, KALMAN_BAROMETER_MEASUREMENT_SIZE>{{
-	1.0e-3f // z
+	1.0e-2f // z
 }};
 
 EKF::MeasurementVector barometerMeasurement(const EKF::StateVector &x)
@@ -149,8 +149,8 @@ bool barometerDataReady()
 }
 
 Sensor barometer = {
-	h_barometer,
-	H_barometer,
-	R_barometer,
-	barometerMeasurement,
-	barometerDataReady};
+	.h = h_barometer,
+	.H = H_barometer,
+	.R = R_barometer,
+	.z = barometerMeasurement,
+	.ready = barometerDataReady};

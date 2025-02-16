@@ -124,9 +124,7 @@ void StartIMUTask(void *argument)
 		gyroscope_data.active = true;
 		gyroscope_data.data_ready = true;
 
-		// printf("ID: 0x%02X Acceleration: %.2f %.2f %.2f Gyroscope: %.4f %.4f %.4f\n", id, *imu_data.acceleration.x, *imu_data.acceleration.y, *imu_data.acceleration.z, *imu_data.angular_velocity.x, *imu_data.angular_velocity.y, *imu_data.angular_velocity.z);
-
-		osDelay(10); // 100 Hz
+		osDelay(1); // 1000 Hz
 	}
 }
 
@@ -147,7 +145,7 @@ EKF::MeasurementVector h_accelerometer(const EKF::StateVector &x)
 // Jacobian of measurement function
 EKF::MeasurementJacobian H_accelerometer(const EKF::StateVector &x)
 {
-	EKF::MeasurementJacobian H(KALMAN_ACCELEROMETER_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
+	EKF::MeasurementJacobian H = EKF::MeasurementJacobian::Zero(KALMAN_ACCELEROMETER_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
 
 	H(0, 3) = 1; // ∂φ/∂φ
 	H(1, 4) = 1; // ∂θ/∂θ
@@ -196,13 +194,13 @@ EKF::MeasurementVector accelerometerMeasurement(const EKF::StateVector &x)
 
 	// Rotate the acceleration vector to the world frame
 	Eigen::Quaternionf q = euler2Quaternion(orientation[0], orientation[1], orientation[2]);
-	Eigen::Vector3f world_acceleration = q.matrix() * acceleration;
+	Eigen::Vector3f world_acceleration = q.matrix().transpose() * acceleration;
 
 	// Subtract gravity from the z-axis
 	world_acceleration[2] += GRAVITY;
 
 	// If the magnitude of the acceleration vector is close to gravity, the pitch and roll angles can be calculated using the accelerometer
-	if (abs(magnitude - GRAVITY) < 0.1f)
+	if (abs(magnitude - GRAVITY) < 0.2f)
 	{
 		orientation[0] = atan2(acceleration[1], -acceleration[2]);
 		orientation[1] = atan2(-acceleration[0], hypot(acceleration[1], acceleration[2]));
@@ -221,11 +219,11 @@ bool accelerometerDataReady()
 }
 
 Sensor accelerometer = {
-	.measurement_function = h_accelerometer,
-	.measurement_jacobian_function = H_accelerometer,
-	.measurement_covariance = R_accelerometer,
-	.measurement = accelerometerMeasurement,
-	.measurement_ready = accelerometerDataReady};
+	.h = h_accelerometer,
+	.H = H_accelerometer,
+	.R = R_accelerometer,
+	.z = accelerometerMeasurement,
+	.ready = accelerometerDataReady};
 
 // Measurement function
 EKF::MeasurementVector h_gyroscope(const EKF::StateVector &x)
@@ -242,7 +240,7 @@ EKF::MeasurementVector h_gyroscope(const EKF::StateVector &x)
 // Jacobian of measurement function
 EKF::MeasurementJacobian H_gyroscope(const EKF::StateVector &x)
 {
-	EKF::MeasurementJacobian H(KALMAN_GYROSCOPE_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
+	EKF::MeasurementJacobian H = EKF::MeasurementJacobian::Zero(KALMAN_GYROSCOPE_MEASUREMENT_SIZE, KALMAN_STATE_SIZE);
 
 	H(0, 9) = 1;  // ∂φ'/∂φ'
 	H(1, 10) = 1; // ∂θ'/∂θ'
@@ -291,8 +289,8 @@ bool gyroscopeDataReady()
 }
 
 Sensor gyroscope = {
-	.measurement_function = h_gyroscope,
-	.measurement_jacobian_function = H_gyroscope,
-	.measurement_covariance = R_gyroscope,
-	.measurement = gyroscopeMeasurement,
-	.measurement_ready = gyroscopeDataReady};
+	.h = h_gyroscope,
+	.H = H_gyroscope,
+	.R = R_gyroscope,
+	.z = gyroscopeMeasurement,
+	.ready = gyroscopeDataReady};

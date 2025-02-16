@@ -70,7 +70,7 @@ void StartDebugTask(void *argument)
 		}
 
 		// Check if all sensors are active
-		all_sensors_active = accelerometer_data.active && magnetometer_data.active && encoders_data.active;
+		all_sensors_active = accelerometer_data.active && magnetometer_data.active && barometer_data.active && encoders_data.active;
 
 		if (all_sensors_active)
 		{
@@ -88,9 +88,13 @@ void StartDebugTask(void *argument)
 			{
 				setPWM(RED_LED1, MEDIUM_BRIGHTNESS, BLINK_2);
 			}
-			else if (!encoders_data.active) // If the encoders are not active
+			else if (!barometer_data.active) // If the barometer is not active
 			{
 				setPWM(RED_LED1, MEDIUM_BRIGHTNESS, BLINK_3);
+			}
+			else if (!encoders_data.active) // If the encoders are not active
+			{
+				setPWM(RED_LED1, MEDIUM_BRIGHTNESS, BLINK_4);
 			}
 		}
 
