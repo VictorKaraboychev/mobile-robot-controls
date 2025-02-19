@@ -99,7 +99,7 @@ EKF::ProcessCovariance Q = Eigen::DiagonalMatrix<float, KALMAN_STATE_SIZE>{
 };
 
 // Sensors
-Sensor *sensors[SENSOR_COUNT] = {&accelerometer, &barometer};
+Sensor *sensors[SENSOR_COUNT] = {&accelerometer, &gyroscope, &barometer};
 
 EKF ekf(f, F, Q);
 RobotState robot;

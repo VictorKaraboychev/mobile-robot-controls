@@ -61,7 +61,8 @@ void StartIMUTask(void *argument)
 	LSM6DSO_GYRO_Set_Filter_Mode(&lsm6dso, 0, LSM6DSO_LP_ODR_DIV_10);
 	LSM6DSO_GYRO_Enable(&lsm6dso);
 
-	osDelay(10);
+	// Wait for the IMU to start
+	osDelay(100);
 
 	// Accelerometer and gyroscope scale factors
 	float acc_scale = GRAVITY / 1000.0f;
@@ -79,10 +80,10 @@ void StartIMUTask(void *argument)
 		LSM6DSO_ACC_GetAxes(&lsm6dso, &acc);
 		LSM6DSO_GYRO_GetAxes(&lsm6dso, &gyro);
 
-		acc_bias += -Eigen::Vector3f{(float)acc.x, (float)acc.y, (float)acc.z};
-		gyro_bias += Eigen::Vector3f{(float)gyro.x, (float)gyro.y, (float)gyro.z};
+		acc_bias += Eigen::Vector3f{(float)acc.x, (float)acc.y, -(float)acc.z};
+		gyro_bias += Eigen::Vector3f{-(float)gyro.x, -(float)gyro.y, (float)gyro.z};
 
-		osDelay(2);
+		osDelay(5);
 	}
 
 	acc_bias *= (acc_scale / (float)samples);
@@ -114,8 +115,14 @@ void StartIMUTask(void *argument)
 		}
 
 		// Map the IMU data to the IMU data structure
-		accelerometer_data.acceleration = -Eigen::Vector3f{(float)acc.x, (float)acc.y, (float)acc.z} * acc_scale - acc_bias;
-		gyroscope_data.angular_velocity = Eigen::Vector3f{(float)gyro.x, (float)gyro.y, (float)gyro.z} * gyro_scale - gyro_bias;
+		accelerometer_data.acceleration = Eigen::Vector3f{(float)acc.x, (float)acc.y, -(float)acc.z} * acc_scale - acc_bias;
+		gyroscope_data.angular_velocity = Eigen::Vector3f{-(float)gyro.x, -(float)gyro.y, (float)gyro.z} * gyro_scale - gyro_bias;
+
+		// print accelerometer
+		// printf("Accelerometer: %.4f %.4f %.4f\n", accelerometer_data.acceleration[0], accelerometer_data.acceleration[1], accelerometer_data.acceleration[2]);
+
+		// print gyroscope
+		// printf("Gyroscope: %.4f %.4f %.4f\n", gyroscope_data.angular_velocity[0], gyroscope_data.angular_velocity[1], gyroscope_data.angular_velocity[2]);
 
 		// Update the IMU data structure
 		accelerometer_data.active = true;
@@ -260,24 +267,25 @@ EKF::MeasurementVector gyroscopeMeasurement(const EKF::StateVector &x)
 {
 	const Eigen::Vector3f &angular_velocity = gyroscope_data.angular_velocity;
 
-	// float s1 = sin(*robot.orientation.x);
-	// float c1 = cos(*robot.orientation.x);
+	float s1 = sin(x[3]);
+	float c1 = cos(x[3]);
 
-	// float c2 = cos(*robot.orientation.y);
-	// float t2 = tan(*robot.orientation.y);
+	float c2 = cos(x[4]);
+	float t2 = tan(x[4]);
 
-	// float p = *angular_velocity.x;
-	// float q = *angular_velocity.y;
-	// float r = *angular_velocity.z;
+	float p = angular_velocity[0];
+	float q = angular_velocity[1];
+	float r = angular_velocity[2];
 
-	// Vector world_angular_velocity = Vector{
-	// 	p + (q * s1 + r * c1) * t2, // φ' = p + (q * s1 + r * c1) * t2
-	// 	q * c1 - r * s1,			// θ' = q * c1 - r * s1
-	// 	(q * s1 + r * c1) / c2		// ψ' = (q * s1 + r * c1) / c2
-	// };
+	Eigen::Vector3f world_angular_velocity {
+		p + (q * s1 + r * c1) * t2, // φ' = p + (q * s1 + r * c1) * t2
+		q * c1 - r * s1,			// θ' = q * c1 - r * s1
+		(q * s1 + r * c1) / c2		// ψ' = (q * s1 + r * c1) / c2
+	};
 
 	// Update the state vector
 	EKF::MeasurementVector z(KALMAN_GYROSCOPE_MEASUREMENT_SIZE);
+	z << angular_velocity[0], angular_velocity[1], angular_velocity[2];
 
 	// Update the state estimate
 	return z;

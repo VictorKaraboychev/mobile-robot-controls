@@ -56,6 +56,9 @@ void StartBarometerTask(void *argument)
 	LPS22HH_TEMP_SetOutputDataRate(&lps22hh, 25.0f);
 	LPS22HH_TEMP_Enable(&lps22hh);
 
+	// Wait for the barometer to start
+	osDelay(100);
+
 	uint16_t samples = 200;
 	float pressure, temperature;
 

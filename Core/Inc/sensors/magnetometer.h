@@ -20,6 +20,8 @@ struct MagnetometerData
 
 	bool active;
 	bool data_ready;
+
+	bool is_calibrating;
 };
 
 extern MagnetometerData magnetometer_data;

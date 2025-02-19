@@ -34,11 +34,11 @@
 #define BLINK_4 blink({200, 150, 200, 150, 200, 150, 200, 1000}, 2250)
 #define BLINK_5 blink({200, 150, 200, 150, 200, 150, 200, 150, 200, 1000}, 2600)
 
-#define OFF_BRIGHTNESS 0.0
-#define LOW_BRIGHTNESS 0.05
-#define MEDIUM_BRIGHTNESS 0.2
-#define HIGH_BRIGHTNESS 0.5
-#define MAX_BRIGHTNESS 1.0
+#define OFF_POWER 0.0
+#define LOW_POWER 0.05
+#define MEDIUM_POWER 0.2
+#define HIGH_POWER 0.5
+#define MAX_POWER 1.0
 
 enum PrintLevel
 {
