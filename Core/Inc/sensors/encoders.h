@@ -12,6 +12,8 @@
 
 #include <stdio.h>
 
+#define KALMAN_ENCODERS_MEASUREMENT_SIZE 3
+
 struct Encoder
 {
 	uint64_t pulses;

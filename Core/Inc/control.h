@@ -3,6 +3,7 @@
 
 #include "main.h"
 #include "cmsis_os.h"
+#include "tim.h"
 
 #include <Eigen/Dense>
 #include "constants.h"
@@ -11,14 +12,11 @@
 
 #include <stdio.h>
 
+#define SERVO_1 &htim12.Instance->CCR2
+#define SERVO_2 &htim12.Instance->CCR1
+
 #define KALMAN_STATE_SIZE 15
 #define KALMAN_CONTROL_SIZE 1
-
-#define KALMAN_ACCELEROMETER_MEASUREMENT_SIZE 5
-#define KALMAN_GYROSCOPE_MEASUREMENT_SIZE 3
-#define KALMAN_MAGNETOMETER_MEASUREMENT_SIZE 1
-#define KALMAN_BAROMETER_MEASUREMENT_SIZE 1
-#define KALMAN_ENCODERS_MEASUREMENT_SIZE 3
 
 #define SENSOR_COUNT 3
 

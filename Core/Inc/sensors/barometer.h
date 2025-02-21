@@ -14,6 +14,8 @@
 
 #include <stdio.h>
 
+#define KALMAN_BAROMETER_MEASUREMENT_SIZE 1
+
 #define SEA_LEVEL_PRESSURE 1013.25f // hPa
 
 struct BarometerData

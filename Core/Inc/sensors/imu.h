@@ -14,6 +14,9 @@
 
 #include <stdio.h>
 
+#define KALMAN_ACCELEROMETER_MEASUREMENT_SIZE 5
+#define KALMAN_GYROSCOPE_MEASUREMENT_SIZE 3
+
 struct AccelerometerData
 {
 	Eigen::Vector3f acceleration; // x, y, z (m/s^2)

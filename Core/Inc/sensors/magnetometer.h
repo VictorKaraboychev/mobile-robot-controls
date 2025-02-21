@@ -14,6 +14,8 @@
 
 #include <stdio.h>
 
+#define KALMAN_MAGNETOMETER_MEASUREMENT_SIZE 1
+
 struct MagnetometerData
 {
 	Eigen::Vector3f magnetic_orientation; // x, y, z (rad)
