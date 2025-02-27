@@ -1,9 +1,7 @@
 #include "control.h"
 
-#define KALMAN_STATE_SIZE 15
-
 // State transition function
-Vector f(const Vector &x, const Vector &u)
+EKF::ProcessVector f(const EKF::StateVector &x, const EKF::ControlVector &u)
 {
 	float dt = u[0];
 	float dt2 = 0.5f * dt * dt;
@@ -26,7 +24,7 @@ Vector f(const Vector &x, const Vector &u)
 		psi -= copysignf(M_TWOPI, psi);
 	}
 
-	return Vector{
+	return EKF::StateVector{
 		x[0] + x[6] * dt + x[12] * dt2, // x = x + x' * Δt + 0.5 * x'' * Δt^2
 		x[1] + x[7] * dt + x[13] * dt2, // y = y + y' * Δt + 0.5 * y'' * Δt^2
 		x[2] + x[8] * dt + x[14] * dt2, // z = z + z' * Δt + 0.5 * z'' * Δt^2
@@ -46,12 +44,12 @@ Vector f(const Vector &x, const Vector &u)
 }
 
 // Jacobian of state transition function
-Matrix F(const Vector &x, const Vector &u)
+EKF::ProcessJacobian F(const EKF::StateVector &x, const EKF::ControlVector &u)
 {
 	float dt = u[0];
 	float dt2 = 0.5f * dt * dt;
 
-	Matrix F = Matrix::Identity(KALMAN_STATE_SIZE);
+	EKF::ProcessJacobian F = EKF::ProcessJacobian::Identity();
 
 	F(0, 6) = dt;	// ∂x/∂x'
 	F(0, 12) = dt2; // ∂x/∂x''
@@ -78,7 +76,7 @@ Matrix F(const Vector &x, const Vector &u)
 }
 
 // Process noise covariance
-Matrix Q = Matrix::Diagonal({
+EKF::ProcessCovariance Q = Eigen::DiagonalMatrix<float, KALMAN_STATE_SIZE>{
 	1.0e-3f, // x 0
 	1.0e-3f, // y 1
 	1.0e-3f, // z 2
@@ -98,201 +96,19 @@ Matrix Q = Matrix::Diagonal({
 	1.0e-5f, // x'' 12
 	1.0e-5f, // y'' 13
 	1.0e-5f, // z'' 14
-});
+};
 
-// --- Accelerometer ---
+// Sensors
+Sensor *sensors[SENSOR_COUNT] = {&accelerometer, &gyroscope, &barometer};
 
-// Measurement function
-Vector h_accelerometer(const Vector &x)
-{
-	return Vector{
-		x[3], // φ (roll)
-		x[4], // θ (pitch)
-
-		x[12], // x''
-		x[13], // y''
-		x[14]  // z''
-	};
-}
-
-// Jacobian of measurement function
-Matrix H_accelerometer(const Vector &x)
-{
-	Matrix H(5, KALMAN_STATE_SIZE);
-
-	H(0, 3) = 1; // ∂φ/∂φ
-	H(1, 4) = 1; // ∂θ/∂θ
-
-	H(2, 12) = 1; // ∂x''/∂x''
-	H(3, 13) = 1; // ∂y''/∂y''
-	H(4, 14) = 1; // ∂z''/∂z''
-
-	return H;
-}
-
-// Measurement noise covariance
-Matrix R_accelerometer = Matrix::Diagonal({5e-3f, 5e-3f, 1e-4f, 1e-4f, 1e-4f}); // acc_noise_density = 75 μg/√Hz (0.00073575 m/s^2/√Hz) ^ 2 / 1000 Hz
-
-void UpdateAccelerometer(const Vector &acceleration)
-{
-	// Rotate the acceleration vector to the world frame
-	Vector world_acceleration = Matrix::Rotation3D(robot.orientation) * acceleration;
-
-	// Subtract gravity from the z-axis
-	world_acceleration[2] += GRAVITY;
-
-	// Compute pitch and roll
-	float roll = atan2(*acceleration.y, -*acceleration.z);
-	float pitch = atan2(-*acceleration.x, hypot(*acceleration.y, *acceleration.z));
-
-	// Update the state vector
-	Vector z = Vector{roll, pitch, *world_acceleration.x, *world_acceleration.y, *world_acceleration.z};
-
-	// Update the state estimate
-	ekf.asyncUpdate(z, h_accelerometer, H_accelerometer, R_accelerometer);
-}
-
-// ---Gyroscope---
-
-// Measurement function
-Vector h_gyroscope(const Vector &x)
-{
-	return Vector{
-		x[9],  // θ' (pitch rate)
-		x[10], // φ' (roll rate)
-		x[11]  // ψ' (yaw rate)
-	};
-}
-
-// Jacobian of measurement function
-Matrix H_gyroscope(const Vector &x)
-{
-	Matrix H(3, KALMAN_STATE_SIZE);
-
-	H(0, 9) = 1;  // ∂θ'/∂θ'
-	H(1, 10) = 1; // ∂φ'/∂φ'
-	H(2, 11) = 1; // ∂ψ'/∂ψ'
-
-	return H;
-}
-
-// Measurement noise covariance
-Matrix R_gyroscope = Matrix::Diagonal({5.0e-5f, 5.0e-5f, 5.0e-5f}); // gyro_noise_density = 0.0038 °/s/√Hz (0.000066 rad/s/√Hz) ^ 2 / 1000 Hz
-
-void UpdateGyroscope(const Vector &angular_velocity)
-{
-	float s1 = sin(*robot.orientation.x);
-	float c1 = cos(*robot.orientation.x);
-
-	float c2 = cos(*robot.orientation.y);
-	float t2 = tan(*robot.orientation.y);
-
-	float p = *angular_velocity.x;
-	float q = *angular_velocity.y;
-	float r = *angular_velocity.z;
-
-	Vector world_angular_velocity = Vector{
-		p + (q * s1 + r * c1) * t2, // φ' = p + (q * s1 + r * c1) * t2
-		q * c1 - r * s1,			// θ' = q * c1 - r * s1
-		(q * s1 + r * c1) / c2		// ψ' = (q * s1 + r * c1) / c2
-	};
-
-	// Update the state vector
-	Vector z = Vector{*world_angular_velocity.x, *world_angular_velocity.y, *world_angular_velocity.z};
-
-	// z.print();
-
-	// Update the state estimate
-	ekf.asyncUpdate(z, h_gyroscope, H_gyroscope, R_gyroscope);
-}
-
-// ---Magnetometer---
-
-// Measurement function
-Vector h_magnetometer(const Vector &x)
-{
-	return Vector{
-		x[5] // ψ
-	};
-}
-
-// Jacobian of measurement function
-Matrix H_magnetometer(const Vector &x)
-{
-	Matrix H(1, KALMAN_STATE_SIZE);
-
-	H(0, 5) = 1; // ∂ψ/∂ψ
-
-	return H;
-}
-
-// Measurement noise covariance
-Matrix R_magnetometer = Matrix::Diagonal({4.0e-4f});
-
-void UpdateMagnetometer(const Vector &orientation)
-{
-	// Update the state vector
-	Vector z = Vector{*orientation.z};
-
-	// Update the state estimate
-	// ekf.asyncUpdate(z, h_magnetometer, H_magnetometer, R_magnetometer);
-}
-
-// ---Encoders---
-
-// Measurement function
-Vector h_encoders(const Vector &x)
-{
-	return Vector{
-		x[6], // x'
-		x[7], // y'
-		x[9]  // ψ'
-	};
-}
-
-// Jacobian of measurement function
-Matrix H_encoders(const Vector &x)
-{
-	Matrix H(2, KALMAN_STATE_SIZE);
-
-	H(0, 6) = 1; // ∂x'/∂x'
-	H(1, 7) = 1; // ∂y'/∂y'
-	H(2, 9) = 1; // ∂ψ'/∂ψ'
-
-	return H;
-}
-
-// Measurement noise covariance
-Matrix R_encoders = Matrix::Diagonal({1.0e-4f, 2.5e-5f});
-
-void UpdateEncoders(const float &forward_velocity, const float &angular_velocity)
-{
-	// Compute x and y velocities
-	float theta = *robot.orientation.z;
-	float s = sin(theta);
-	float c = cos(theta);
-
-	float v_x = forward_velocity * c - forward_velocity * s;
-	float v_y = forward_velocity * s + forward_velocity * c;
-
-	// Update the state vector
-	Vector z = Vector{v_x, v_y, angular_velocity};
-
-	// Update the state estimate
-	// ekf.asyncUpdate(z, h_encoders, H_encoders, R_encoders);
-}
-
-ExtendedKalmanFilter ekf;
+EKF ekf(f, F, Q);
 RobotState robot;
 
 void StartFusionTask(void *argument)
 {
-	// Create the Extended Kalman Filter
-	ekf = ExtendedKalmanFilter(f, F, Q);
-
 	// Set the initial state
-	Vector x(KALMAN_STATE_SIZE);
-	Matrix P = Matrix::Identity(KALMAN_STATE_SIZE) * 0.01f;
+	EKF::StateVector x = EKF::StateVector::Zero();
+	EKF::StateMatrix P = EKF::StateMatrix::Identity() * 0.01f;
 	ekf.initialize(x, P);
 
 	osDelay(2000); // Wait for the sensors to initialize
@@ -305,46 +121,126 @@ void StartFusionTask(void *argument)
 		float delta_time = (HAL_GetTick() - last_time) / 1000.0f;
 		last_time = HAL_GetTick();
 
+		// Create the control vector
+		EKF::ControlVector u{delta_time};
+
 		// Predict the state
-		ekf.predict(Vector{delta_time});
+		ekf.predict(u);
 
 		// Update the state from the state vector
-		Vector state = ekf.getState();
+		x = ekf.getState();
 
-		robot.position = Vector{state[0], state[1], state[2]};
-		robot.velocity = Vector{state[6], state[7], state[8]};
-		robot.acceleration = Vector{state[12], state[13], state[14]};
+		// Check all sensors for updates
+		for (int i = 0; i < SENSOR_COUNT; i++)
+		{
+			Sensor *s = sensors[i];
+			if (s->ready())
+			{
+				// Update the measurement functions and covariance
+				ekf.setMeasurement(s->h, s->H, s->R);
 
-		robot.orientation = Vector{state[3], state[4], state[5]};
-		robot.angular_velocity = Vector{state[9], state[10], state[11]};
+				// Get the measurement vector
+				EKF::MeasurementVector z = s->z(x);
 
-		osDelay(10); // 100 Hz
+				// Update the state estimate
+				ekf.update(z);
+			}
+		}
+
+		// Get the state vector
+		x = ekf.getState();
+
+		// Update the robot state
+		robot.position = Eigen::Vector3f{x[0], x[1], x[2]};
+		robot.velocity = Eigen::Vector3f{x[6], x[7], x[8]};
+		robot.acceleration = Eigen::Vector3f{x[12], x[13], x[14]};
+
+		robot.orientation = Eigen::Vector3f{x[3], x[4], x[5]};
+		robot.angular_velocity = Eigen::Vector3f{x[9], x[10], x[11]};
+
+		osDelay(4); // 250 Hz
 	}
 }
 
+#define SERVO_MIN_PULSE_WIDTH 500
+#define SERVO_MAX_PULSE_WIDTH 2500
+#define SERVO_MAX_ANGLE 270
+#define MICROSECONDS_PER_TICK 1
+
+void setServoAngle(volatile uint32_t *handle, float angle)
+{
+	// Calculate the pulse width
+	uint32_t pulse_width = SERVO_MIN_PULSE_WIDTH + (SERVO_MAX_PULSE_WIDTH - SERVO_MIN_PULSE_WIDTH) * (angle / SERVO_MAX_ANGLE);
+
+	// Set the pulse width
+	*handle = pulse_width / MICROSECONDS_PER_TICK; // 250Hz
+}
+
+DDSM400 motor1(0x01);
+// uint8_t motor1_id = 0x01;
+
 void StartControlTask(void *argument)
 {
+	// HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_1);
+	// HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_2);
+
+	// const float min_angle = 0.0f;
+	// const float max_angle = 180.0f;
+	// float angle = 0.0f;
+
+	// float velocity = 1.0f;
+
+	osDelay(2000); // Wait for the sensors to initialize
+
+	// motor1.init(0x01);
+	// motor1.init(0x01);
+	// motor1.init(0x01);
+	// motor1.init(0x01);
+	// motor1.init(0x01);
+
+	motor1.enable();
+	motor1.setMode(DDSM400_MODE::SPEED);
+
+	motor1.setSpeed(5);
+
 	while (true)
 	{
-		Vector target = Vector({0, 0}); // GetTarget();
 
-		// Calculate the curvature
-		float curvature = 0; // calculateCurvature(robot.position, robot.orientation, target);
+		// angle += velocity;
 
-		// Calculate the left and right wheel velocities
-		float left_velocity = TARGET_SPEED * (1 - curvature * WHEEL_DISTANCE / 2.0f);
-		float right_velocity = TARGET_SPEED * (1 + curvature * WHEEL_DISTANCE / 2.0f);
+		// if (angle >= max_angle || angle <= min_angle)
+		// {
+		// 	velocity *= -1.0f;
+		// }
 
-		// Limit the wheel velocities to the maximum speed
-		float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
+		// setServoAngle(SERVO_1, angle);
+		// setServoAngle(SERVO_2, max_angle - angle);
 
-		// If the maximum velocity is greater than the maximum speed (maintain the ratio)
-		if (max_velocity > MAX_SPEED)
-		{
-			left_velocity *= MAX_SPEED / max_velocity;
-			right_velocity *= MAX_SPEED / max_velocity;
-		}
+		// setServoAngle(SERVO_1, 0);
+		// setServoAngle(SERVO_2, 0);
 
-		osDelay(10); // 100 Hz
+		// Eigen::Vector2f position = robot.position.head<2>();
+		// Eigen::Vector2f target{0, 0}; // GetTarget();
+
+		// // Calculate the curvature
+		// float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2], target);
+
+		// // Calculate the left and right wheel velocities
+		// float left_velocity = TARGET_SPEED * (1 - curvature * WHEEL_DISTANCE / 2.0f);
+		// float right_velocity = TARGET_SPEED * (1 + curvature * WHEEL_DISTANCE / 2.0f);
+
+		// // Limit the wheel velocities to the maximum speed
+		// float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
+
+		// // If the maximum velocity is greater than the maximum speed (maintain the ratio)
+		// if (max_velocity > MAX_SPEED)
+		// {
+		// 	left_velocity *= MAX_SPEED / max_velocity;
+		// 	right_velocity *= MAX_SPEED / max_velocity;
+		// }
+
+		// motor1.setSpeed(5);
+
+		osDelay(100); // 100 Hz
 	}
 }

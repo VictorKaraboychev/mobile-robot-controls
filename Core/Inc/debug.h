@@ -6,8 +6,12 @@
 
 #include "tim.h"
 
-#include "sensors.h"
 #include "control.h"
+
+#include "barometer.h"
+#include "encoders.h"
+#include "imu.h"
+#include "magnetometer.h"
 
 #include <stdio.h>
 
@@ -25,16 +29,16 @@
 #define FAST_BLINK blink({100, 100}, 200)
 
 #define BLINK_1 blink({200, 1000}, 1200)
-#define BLINK_2 blink({200, 100, 200, 1000}, 1500)
-#define BLINK_3 blink({200, 100, 200, 100, 200, 1000}, 1800)
-#define BLINK_4 blink({200, 100, 200, 100, 200, 100, 200, 1000}, 2100)
-#define BLINK_5 blink({200, 100, 200, 100, 200, 100, 200, 100, 200, 1000}, 2400)
+#define BLINK_2 blink({200, 150, 200, 1000}, 1550)
+#define BLINK_3 blink({200, 150, 200, 150, 200, 1000}, 1900)
+#define BLINK_4 blink({200, 150, 200, 150, 200, 150, 200, 1000}, 2250)
+#define BLINK_5 blink({200, 150, 200, 150, 200, 150, 200, 150, 200, 1000}, 2600)
 
-#define OFF_BRIGHTNESS 0.0
-#define LOW_BRIGHTNESS 0.05
-#define MEDIUM_BRIGHTNESS 0.2
-#define HIGH_BRIGHTNESS 0.5
-#define MAX_BRIGHTNESS 1.0
+#define OFF_POWER 0.0
+#define LOW_POWER 0.05
+#define MEDIUM_POWER 0.2
+#define HIGH_POWER 0.5
+#define MAX_POWER 1.0
 
 enum PrintLevel
 {

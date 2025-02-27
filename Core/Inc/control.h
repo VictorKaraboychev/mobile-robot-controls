@@ -3,34 +3,53 @@
 
 #include "main.h"
 #include "cmsis_os.h"
+#include "tim.h"
 
-#include "utility/vector.h"
-#include "utility/matrix.h"
+#include <Eigen/Dense>
+#include "constants.h"
 #include "extended_kalman_filter.h"
 #include "pure_pursuit.h"
 
-#include "sensors.h"
-
 #include <stdio.h>
 
-#define TARGET_SPEED 0.5f // m/s
-#define MAX_SPEED 1.5f	  // m/s
+#define SERVO_1 &htim12.Instance->CCR2
+#define SERVO_2 &htim12.Instance->CCR1
+
+#define KALMAN_STATE_SIZE 15
+#define KALMAN_CONTROL_SIZE 1
+
+#define SENSOR_COUNT 3
+
+using EKF = ExtendedKalmanFilter<float, KALMAN_STATE_SIZE, KALMAN_CONTROL_SIZE>;
+
+struct Sensor
+{
+	EKF::MeasurementFunc h;
+	EKF::MeasurementJacobianFunc H;
+	EKF::MeasurementCovariance R;
+
+	EKF::MeasurementFunc z;
+	std::function<bool()> ready;
+};
+
+#include "barometer.h"
+#include "encoders.h"
+#include "imu.h"
+#include "magnetometer.h"
+
+#include "ddsm400.h"
+
 struct RobotState
 {
-	Vector position;		 // x, y, z (m)
-	Vector velocity;		 // v_x, v_y, v_z (m/s)
-	Vector acceleration;	 // a_x, a_y, a_z (m/s^2)
-	Vector orientation;		 // (θ, φ, ψ) (rad)
-	Vector angular_velocity; // (ω_x, ω_y, ω_z) (rad/s)
+	Eigen::Vector3f position;		  // x, y, z (m)
+	Eigen::Vector3f velocity;		  // v_x, v_y, v_z (m/s)
+	Eigen::Vector3f acceleration;	  // a_x, a_y, a_z (m/s^2)
+	Eigen::Vector3f orientation;	  // (θ, φ, ψ) (rad)
+	Eigen::Vector3f angular_velocity; // (ω_x, ω_y, ω_z) (rad/s)
 };
 
 extern RobotState robot;
-extern ExtendedKalmanFilter ekf;
-
-void UpdateAccelerometer(const Vector &acceleration);
-void UpdateGyroscope(const Vector &angular_velocity);
-void UpdateMagnetometer(const Vector &orientation);
-void UpdateEncoders(const float &forward_velocity, const float &angular_velocity);
+extern EKF ekf;
 
 void StartFusionTask(void *argument);
 void StartControlTask(void *argument);

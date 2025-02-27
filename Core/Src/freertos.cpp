@@ -56,20 +56,6 @@ const osThreadAttr_t defaultTask_attributes = {
     .stack_size = 128 * 4,
     .priority = (osPriority_t)osPriorityLow,
 };
-/* Definitions for imuTask */
-osThreadId_t imuTaskHandle;
-const osThreadAttr_t imuTask_attributes = {
-    .name = "imuTask",
-    .stack_size = 512 * 4,
-    .priority = (osPriority_t)osPriorityNormal,
-};
-/* Definitions for magTask */
-osThreadId_t magTaskHandle;
-const osThreadAttr_t magTask_attributes = {
-    .name = "magTask",
-    .stack_size = 512 * 4,
-    .priority = (osPriority_t)osPriorityNormal,
-};
 /* Definitions for encodersTask */
 osThreadId_t encodersTaskHandle;
 const osThreadAttr_t encodersTask_attributes = {
@@ -81,7 +67,7 @@ const osThreadAttr_t encodersTask_attributes = {
 osThreadId_t fusionTaskHandle;
 const osThreadAttr_t fusionTask_attributes = {
     .name = "fusionTask",
-    .stack_size = 1024 * 4,
+    .stack_size = 8192 * 4,
     .priority = (osPriority_t)osPriorityNormal,
 };
 /* Definitions for debugTask */
@@ -97,6 +83,27 @@ const osThreadAttr_t controlTask_attributes = {
     .name = "controlTask",
     .stack_size = 1024 * 4,
     .priority = (osPriority_t)osPriorityHigh,
+};
+/* Definitions for barometerTask */
+osThreadId_t barometerTaskHandle;
+const osThreadAttr_t barometerTask_attributes = {
+    .name = "barometerTask",
+    .stack_size = 512 * 4,
+    .priority = (osPriority_t)osPriorityNormal,
+};
+/* Definitions for imuTask */
+osThreadId_t imuTaskHandle;
+const osThreadAttr_t imuTask_attributes = {
+    .name = "imuTask",
+    .stack_size = 512 * 4,
+    .priority = (osPriority_t)osPriorityNormal,
+};
+/* Definitions for magTask */
+osThreadId_t magTaskHandle;
+const osThreadAttr_t magTask_attributes = {
+    .name = "magTask",
+    .stack_size = 2048 * 4,
+    .priority = (osPriority_t)osPriorityNormal,
 };
 /* Definitions for spi1Mutex */
 osMutexId_t spi1MutexHandle;
@@ -133,12 +140,13 @@ const osMutexAttr_t uart7Mutex_attributes = {
 /* USER CODE END FunctionPrototypes */
 
 void StartDefaultTask(void *argument);
-extern void StartImuTask(void *argument);
-extern void StartMagTask(void *argument);
 extern void StartEncodersTask(void *argument);
 extern void StartFusionTask(void *argument);
 extern void StartDebugTask(void *argument);
 extern void StartControlTask(void *argument);
+extern void StartBarometerTask(void *argument);
+extern void StartIMUTask(void *argument);
+extern void StartMagTask(void *argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -208,12 +216,6 @@ void MX_FREERTOS_Init(void)
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
-  /* creation of imuTask */
-  imuTaskHandle = osThreadNew(StartImuTask, NULL, &imuTask_attributes);
-
-  /* creation of magTask */
-  magTaskHandle = osThreadNew(StartMagTask, NULL, &magTask_attributes);
-
   /* creation of encodersTask */
   encodersTaskHandle = osThreadNew(StartEncodersTask, NULL, &encodersTask_attributes);
 
@@ -225,6 +227,15 @@ void MX_FREERTOS_Init(void)
 
   /* creation of controlTask */
   controlTaskHandle = osThreadNew(StartControlTask, NULL, &controlTask_attributes);
+
+  /* creation of barometerTask */
+  barometerTaskHandle = osThreadNew(StartBarometerTask, NULL, &barometerTask_attributes);
+
+  /* creation of imuTask */
+  imuTaskHandle = osThreadNew(StartIMUTask, NULL, &imuTask_attributes);
+
+  /* creation of magTask */
+  magTaskHandle = osThreadNew(StartMagTask, NULL, &magTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
