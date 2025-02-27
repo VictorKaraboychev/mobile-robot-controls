@@ -36,6 +36,9 @@ struct Sensor
 #include "encoders.h"
 #include "imu.h"
 #include "magnetometer.h"
+
+#include "ddsm400.h"
+
 struct RobotState
 {
 	Eigen::Vector3f position;		  // x, y, z (m)

@@ -176,6 +176,9 @@ void setServoAngle(volatile uint32_t *handle, float angle)
 	*handle = pulse_width / MICROSECONDS_PER_TICK; // 250Hz
 }
 
+DDSM400 motor1(0x01);
+// uint8_t motor1_id = 0x01;
+
 void StartControlTask(void *argument)
 {
 	// HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_1);
@@ -187,8 +190,22 @@ void StartControlTask(void *argument)
 
 	// float velocity = 1.0f;
 
+	osDelay(2000); // Wait for the sensors to initialize
+
+	// motor1.init(0x01);
+	// motor1.init(0x01);
+	// motor1.init(0x01);
+	// motor1.init(0x01);
+	// motor1.init(0x01);
+
+	motor1.enable();
+	motor1.setMode(DDSM400_MODE::SPEED);
+
+	motor1.setSpeed(5);
+
 	while (true)
 	{
+
 		// angle += velocity;
 
 		// if (angle >= max_angle || angle <= min_angle)
@@ -222,6 +239,8 @@ void StartControlTask(void *argument)
 		// 	right_velocity *= MAX_SPEED / max_velocity;
 		// }
 
-		osDelay(10); // 100 Hz
+		// motor1.setSpeed(5);
+
+		osDelay(100); // 100 Hz
 	}
 }

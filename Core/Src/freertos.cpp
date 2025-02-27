@@ -102,7 +102,7 @@ const osThreadAttr_t imuTask_attributes = {
 osThreadId_t magTaskHandle;
 const osThreadAttr_t magTask_attributes = {
     .name = "magTask",
-    .stack_size = 8192 * 4,
+    .stack_size = 2048 * 4,
     .priority = (osPriority_t)osPriorityNormal,
 };
 /* Definitions for spi1Mutex */

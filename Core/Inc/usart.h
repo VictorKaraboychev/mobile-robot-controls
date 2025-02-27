@@ -30,6 +30,8 @@ extern "C" {
 
 /* USER CODE BEGIN Includes */
 
+#include "cmsis_os.h"
+
 /* USER CODE END Includes */
 
 extern UART_HandleTypeDef huart4;
@@ -47,6 +49,9 @@ void MX_UART7_Init(void);
 void MX_UART8_Init(void);
 
 /* USER CODE BEGIN Prototypes */
+
+HAL_StatusTypeDef UART_Read(UART_HandleTypeDef *huart, osMutexId_t *muart, uint8_t *pData, uint16_t size);
+HAL_StatusTypeDef UART_Write(UART_HandleTypeDef *huart, osMutexId_t *muart, const uint8_t *pData, uint16_t size);
 
 /* USER CODE END Prototypes */
 
