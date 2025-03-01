@@ -38,52 +38,97 @@ uint8_t crc8(uint8_t const *data, size_t data_size, uint8_t poly, uint8_t init, 
 	return (refout ? uint8_reverse(crc) : crc) ^ xor_out;
 }
 
-uint8_t LIN_PID(uint8_t id)
+// uint8_t LIN_Checksum(uint8_t *data, uint8_t len)
+// {
+// 	uint16_t checksum = 0;
+
+// 	for (uint8_t i = 0; i < len; i++)
+// 	{
+// 		checksum += data[i];
+
+// 		if (checksum > 0xFF)
+// 		{
+// 			checksum -= 0xFF;
+// 		}
+// 	}
+
+// 	return 0xFF - checksum;
+// }
+
+// uint8_t LIN_PID(uint8_t id)
+// {
+// 	if (id > 0x3F)
+// 	{
+// 		return 0x00;
+// 	}
+
+// 	uint8_t bits[6];
+
+// 	for (uint8_t i = 0; i < 6; i++)
+// 	{
+// 		bits[i] = (id >> i) & 0x01;
+// 	}
+
+// 	uint8_t p0 = (bits[0] ^ bits[1] ^ bits[2] ^ bits[4]) & 0x01;
+// 	uint8_t p1 = ~((bits[1] ^ bits[3] ^ bits[4] ^ bits[5]) & 0x01);
+
+// 	uint8_t pid = id | (p0 << 6) | (p1 << 7);
+
+// 	return pid;
+// }
+
+// HAL_StatusTypeDef LIN_Write(uint8_t id, uint8_t *data, uint8_t len)
+// {
+// 	// Sync, ID, Reg, Data, CRC
+// 	uint8_t frame[11] = {0x55, LIN_PID(id), 0, 0, 0, 0, 0, 0, 0, 0, 0};
+
+// 	// Copy the data into the frame
+// 	for (uint8_t i = 0; i < len; i++)
+// 	{
+// 		frame[i + 2] = data[i];
+// 	}
+
+// 	// Calculate the CRC
+// 	frame[10] = LIN_Checksum(frame + 1, 9); // crc8(frame + 1, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00);
+
+// 	// print bytes
+// 	for (uint8_t i = 0; i < 11; i++)
+// 	{
+// 		printf("0x%02X ", frame[i]);
+// 	}
+// 	printf("\n");
+
+// 	// Send break
+// 	HAL_LIN_SendBreak(&huart4);
+
+// 	HAL_StatusTypeDef status = UART_Write(&huart4, &uart4MutexHandle, frame, 11);
+
+// 	osDelay(10);
+
+// 	return status;
+// }
+
+HAL_StatusTypeDef DDSM400_Write(uint8_t id, uint8_t *data, uint8_t len)
 {
-	if (id > 0x3F)
-	{
-		return 0x00;
-	}
+	uint8_t frame[10] = {id, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
-	uint8_t bits[6];
-
-	for (uint8_t i = 0; i < 6; i++)
-	{
-		bits[i] = (id >> i) & 0x01;
-	}
-
-	uint8_t p0 = (bits[0] ^ bits[1] ^ bits[2] ^ bits[4]) & 0x01;
-	uint8_t p1 = ~((bits[1] ^ bits[3] ^ bits[4] ^ bits[5]) & 0x01);
-
-	uint8_t pid = id | (p0 << 6) | (p1 << 7);
-
-	return pid;
-}
-
-HAL_StatusTypeDef LIN_Write(uint8_t id, uint8_t *data, uint8_t len)
-{
-	// Sync, ID, Reg, Data, CRC
-	uint8_t bytes[11] = {0x55, id, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
+	// Copy the data into the frame
 	for (uint8_t i = 0; i < len; i++)
 	{
-		bytes[i + 2] = data[i];
+		frame[i + 1] = data[i];
 	}
 
-	bytes[10] = crc8(bytes + 1, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00);
-	bytes[1] = LIN_PID(bytes[1]);
+	// Calculate the CRC
+	frame[9] = crc8(frame, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00);
 
 	// print bytes
-	for (uint8_t i = 0; i < 11; i++)
+	for (uint8_t i = 0; i < 10; i++)
 	{
-		printf("0x%02X ", bytes[i]);
+		printf("0x%02X ", frame[i]);
 	}
 	printf("\n");
 
-	// Send break
-	HAL_LIN_SendBreak(&huart4);
-
-	HAL_StatusTypeDef status = UART_Write(&huart4, &uart4MutexHandle, bytes, 11);
+	HAL_StatusTypeDef status = UART_Write(&huart4, &uart4MutexHandle, frame, 10);
 
 	osDelay(10);
 
@@ -104,11 +149,18 @@ DDSM400::~DDSM400()
 {
 }
 
-void DDSM400::init(uint8_t id)
+void DDSM400::init(uint8_t id, bool set)
 {
-	uint8_t data[3] = {0x55, 0x53, id};
+	if (set)
+	{
+		uint8_t data[3] = {0x55, 0x53, id};
 
-	HAL_StatusTypeDef status = LIN_Write(0xAA, data, 3);
+		// Command the motor to set the ID 5 times
+		for (uint8_t i = 0; i < 5; i++)
+		{
+			HAL_StatusTypeDef status = DDSM400_Write(0xAA, data, 3);
+		}
+	}
 
 	this->id = id;
 }
@@ -117,7 +169,7 @@ void DDSM400::setMode(DDSM400_MODE mode)
 {
 	uint8_t data[2] = {0xA0, (uint8_t)mode};
 
-	HAL_StatusTypeDef status = LIN_Write(id, data, 2);
+	HAL_StatusTypeDef status = DDSM400_Write(id, data, 2);
 
 	this->mode = mode;
 }
@@ -154,5 +206,5 @@ void DDSM400::setSpeed(float speed, float acceleration, bool brake)
 	// Brake
 	data[6] = brake ? 0xFF : 0x00;
 
-	HAL_StatusTypeDef status = LIN_Write(id, data, 8);
+	HAL_StatusTypeDef status = DDSM400_Write(id, data, 8);
 }

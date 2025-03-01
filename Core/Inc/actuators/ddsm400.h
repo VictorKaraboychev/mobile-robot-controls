@@ -39,7 +39,7 @@ public:
 	DDSM400(uint8_t id);
 	~DDSM400();
 
-	void init(uint8_t id);
+	void init(uint8_t id, bool set = false);
 
 	// Set the motor mode
 	void setMode(DDSM400_MODE mode);

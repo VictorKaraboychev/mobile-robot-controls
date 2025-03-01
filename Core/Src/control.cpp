@@ -176,8 +176,10 @@ void setServoAngle(volatile uint32_t *handle, float angle)
 	*handle = pulse_width / MICROSECONDS_PER_TICK; // 250Hz
 }
 
-DDSM400 motor1(0x01);
-// uint8_t motor1_id = 0x01;
+DDSM400 motor1(0x01); // Front left
+DDSM400 motor2(0x02); // Front right
+DDSM400 motor3(0x03); // Rear left
+DDSM400 motor4(0x04); // Rear right
 
 void StartControlTask(void *argument)
 {
@@ -192,16 +194,20 @@ void StartControlTask(void *argument)
 
 	osDelay(2000); // Wait for the sensors to initialize
 
-	// motor1.init(0x01);
-	// motor1.init(0x01);
-	// motor1.init(0x01);
-	// motor1.init(0x01);
-	// motor1.init(0x01);
-
 	motor1.enable();
+	motor3.enable();
+
 	motor1.setMode(DDSM400_MODE::SPEED);
+	motor3.setMode(DDSM400_MODE::SPEED);
 
 	motor1.setSpeed(5);
+	motor3.setSpeed(5);
+
+	osDelay(2000);
+
+	motor1.disable();
+	motor3.disable();
+
 
 	while (true)
 	{
@@ -240,6 +246,8 @@ void StartControlTask(void *argument)
 		// }
 
 		// motor1.setSpeed(5);
+
+		// motor1.enable();
 
 		osDelay(100); // 100 Hz
 	}
