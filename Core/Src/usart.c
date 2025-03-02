@@ -49,7 +49,7 @@ void MX_UART4_Init(void)
   huart4.Init.OverSampling = UART_OVERSAMPLING_16;
   huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart4.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_TXINVERT_INIT|UART_ADVFEATURE_RXINVERT_INIT;
+  huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_TXINVERT_INIT | UART_ADVFEATURE_RXINVERT_INIT;
   huart4.AdvancedInit.TxPinLevelInvert = UART_ADVFEATURE_TXINV_ENABLE;
   huart4.AdvancedInit.RxPinLevelInvert = UART_ADVFEATURE_RXINV_ENABLE;
   if (HAL_UART_Init(&huart4) != HAL_OK)
@@ -71,7 +71,6 @@ void MX_UART4_Init(void)
   /* USER CODE BEGIN UART4_Init 2 */
 
   /* USER CODE END UART4_Init 2 */
-
 }
 /* UART7 init function */
 void MX_UART7_Init(void)
@@ -114,7 +113,6 @@ void MX_UART7_Init(void)
   /* USER CODE BEGIN UART7_Init 2 */
 
   /* USER CODE END UART7_Init 2 */
-
 }
 /* UART8 init function */
 void MX_UART8_Init(void)
@@ -157,22 +155,21 @@ void MX_UART8_Init(void)
   /* USER CODE BEGIN UART8_Init 2 */
 
   /* USER CODE END UART8_Init 2 */
-
 }
 
-void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
+void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)
 {
 
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
-  if(uartHandle->Instance==UART4)
+  if (uartHandle->Instance == UART4)
   {
-  /* USER CODE BEGIN UART4_MspInit 0 */
+    /* USER CODE BEGIN UART4_MspInit 0 */
 
-  /* USER CODE END UART4_MspInit 0 */
+    /* USER CODE END UART4_MspInit 0 */
 
-  /** Initializes the peripherals clock
-  */
+    /** Initializes the peripherals clock
+     */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_UART4;
     PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
@@ -205,18 +202,18 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     /* UART4 interrupt Init */
     HAL_NVIC_SetPriority(UART4_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(UART4_IRQn);
-  /* USER CODE BEGIN UART4_MspInit 1 */
+    /* USER CODE BEGIN UART4_MspInit 1 */
 
-  /* USER CODE END UART4_MspInit 1 */
+    /* USER CODE END UART4_MspInit 1 */
   }
-  else if(uartHandle->Instance==UART7)
+  else if (uartHandle->Instance == UART7)
   {
-  /* USER CODE BEGIN UART7_MspInit 0 */
+    /* USER CODE BEGIN UART7_MspInit 0 */
 
-  /* USER CODE END UART7_MspInit 0 */
+    /* USER CODE END UART7_MspInit 0 */
 
-  /** Initializes the peripherals clock
-  */
+    /** Initializes the peripherals clock
+     */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_UART7;
     PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
@@ -232,25 +229,25 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     PF6     ------> UART7_RX
     PF7     ------> UART7_TX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
+    GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF7_UART7;
     HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
 
-  /* USER CODE BEGIN UART7_MspInit 1 */
+    /* USER CODE BEGIN UART7_MspInit 1 */
 
-  /* USER CODE END UART7_MspInit 1 */
+    /* USER CODE END UART7_MspInit 1 */
   }
-  else if(uartHandle->Instance==UART8)
+  else if (uartHandle->Instance == UART8)
   {
-  /* USER CODE BEGIN UART8_MspInit 0 */
+    /* USER CODE BEGIN UART8_MspInit 0 */
 
-  /* USER CODE END UART8_MspInit 0 */
+    /* USER CODE END UART8_MspInit 0 */
 
-  /** Initializes the peripherals clock
-  */
+    /** Initializes the peripherals clock
+     */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_UART8;
     PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
@@ -266,27 +263,27 @@ void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
     PE0     ------> UART8_RX
     PE1     ------> UART8_TX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
+    GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = GPIO_AF8_UART8;
     HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
-  /* USER CODE BEGIN UART8_MspInit 1 */
+    /* USER CODE BEGIN UART8_MspInit 1 */
 
-  /* USER CODE END UART8_MspInit 1 */
+    /* USER CODE END UART8_MspInit 1 */
   }
 }
 
-void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
+void HAL_UART_MspDeInit(UART_HandleTypeDef *uartHandle)
 {
 
-  if(uartHandle->Instance==UART4)
+  if (uartHandle->Instance == UART4)
   {
-  /* USER CODE BEGIN UART4_MspDeInit 0 */
+    /* USER CODE BEGIN UART4_MspDeInit 0 */
 
-  /* USER CODE END UART4_MspDeInit 0 */
+    /* USER CODE END UART4_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_UART4_CLK_DISABLE();
 
@@ -294,19 +291,19 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
     PA0     ------> UART4_TX
     PA1     ------> UART4_RX
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_0|GPIO_PIN_1);
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_0 | GPIO_PIN_1);
 
     /* UART4 interrupt Deinit */
     HAL_NVIC_DisableIRQ(UART4_IRQn);
-  /* USER CODE BEGIN UART4_MspDeInit 1 */
+    /* USER CODE BEGIN UART4_MspDeInit 1 */
 
-  /* USER CODE END UART4_MspDeInit 1 */
+    /* USER CODE END UART4_MspDeInit 1 */
   }
-  else if(uartHandle->Instance==UART7)
+  else if (uartHandle->Instance == UART7)
   {
-  /* USER CODE BEGIN UART7_MspDeInit 0 */
+    /* USER CODE BEGIN UART7_MspDeInit 0 */
 
-  /* USER CODE END UART7_MspDeInit 0 */
+    /* USER CODE END UART7_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_UART7_CLK_DISABLE();
 
@@ -314,17 +311,17 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
     PF6     ------> UART7_RX
     PF7     ------> UART7_TX
     */
-    HAL_GPIO_DeInit(GPIOF, GPIO_PIN_6|GPIO_PIN_7);
+    HAL_GPIO_DeInit(GPIOF, GPIO_PIN_6 | GPIO_PIN_7);
 
-  /* USER CODE BEGIN UART7_MspDeInit 1 */
+    /* USER CODE BEGIN UART7_MspDeInit 1 */
 
-  /* USER CODE END UART7_MspDeInit 1 */
+    /* USER CODE END UART7_MspDeInit 1 */
   }
-  else if(uartHandle->Instance==UART8)
+  else if (uartHandle->Instance == UART8)
   {
-  /* USER CODE BEGIN UART8_MspDeInit 0 */
+    /* USER CODE BEGIN UART8_MspDeInit 0 */
 
-  /* USER CODE END UART8_MspDeInit 0 */
+    /* USER CODE END UART8_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_UART8_CLK_DISABLE();
 
@@ -332,36 +329,36 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
     PE0     ------> UART8_RX
     PE1     ------> UART8_TX
     */
-    HAL_GPIO_DeInit(GPIOE, GPIO_PIN_0|GPIO_PIN_1);
+    HAL_GPIO_DeInit(GPIOE, GPIO_PIN_0 | GPIO_PIN_1);
 
-  /* USER CODE BEGIN UART8_MspDeInit 1 */
+    /* USER CODE BEGIN UART8_MspDeInit 1 */
 
-  /* USER CODE END UART8_MspDeInit 1 */
+    /* USER CODE END UART8_MspDeInit 1 */
   }
 }
 
 /* USER CODE BEGIN 1 */
 
-HAL_StatusTypeDef UART_Read(UART_HandleTypeDef *huart, osMutexId_t *muart, uint8_t *pData, uint16_t size)
+HAL_StatusTypeDef UART_Read(UART_HandleTypeDef *huart, osMutexId_t *muart, uint8_t *pData, uint16_t size, uint32_t timeout)
 {
   osMutexAcquire(*muart, osWaitForever);
 
   HAL_StatusTypeDef status = HAL_OK;
 
-  status = HAL_UART_Receive(huart, pData, size, HAL_MAX_DELAY);
+  status = HAL_UART_Receive(huart, pData, size, timeout);
 
   osMutexRelease(*muart);
 
   return status;
 }
 
-HAL_StatusTypeDef UART_Write(UART_HandleTypeDef *huart, osMutexId_t *muart, const uint8_t *pData, uint16_t size)
+HAL_StatusTypeDef UART_Write(UART_HandleTypeDef *huart, osMutexId_t *muart, const uint8_t *pData, uint16_t size, uint32_t timeout)
 {
   osMutexAcquire(*muart, osWaitForever);
 
   HAL_StatusTypeDef status = HAL_OK;
 
-  status = HAL_UART_Transmit(huart, (uint8_t *)pData, size, HAL_MAX_DELAY);
+  status = HAL_UART_Transmit(huart, (uint8_t *)pData, size, timeout);
 
   osMutexRelease(*muart);
 

@@ -38,97 +38,55 @@ uint8_t crc8(uint8_t const *data, size_t data_size, uint8_t poly, uint8_t init, 
 	return (refout ? uint8_reverse(crc) : crc) ^ xor_out;
 }
 
-// uint8_t LIN_Checksum(uint8_t *data, uint8_t len)
-// {
-// 	uint16_t checksum = 0;
-
-// 	for (uint8_t i = 0; i < len; i++)
-// 	{
-// 		checksum += data[i];
-
-// 		if (checksum > 0xFF)
-// 		{
-// 			checksum -= 0xFF;
-// 		}
-// 	}
-
-// 	return 0xFF - checksum;
-// }
-
-// uint8_t LIN_PID(uint8_t id)
-// {
-// 	if (id > 0x3F)
-// 	{
-// 		return 0x00;
-// 	}
-
-// 	uint8_t bits[6];
-
-// 	for (uint8_t i = 0; i < 6; i++)
-// 	{
-// 		bits[i] = (id >> i) & 0x01;
-// 	}
-
-// 	uint8_t p0 = (bits[0] ^ bits[1] ^ bits[2] ^ bits[4]) & 0x01;
-// 	uint8_t p1 = ~((bits[1] ^ bits[3] ^ bits[4] ^ bits[5]) & 0x01);
-
-// 	uint8_t pid = id | (p0 << 6) | (p1 << 7);
-
-// 	return pid;
-// }
-
-// HAL_StatusTypeDef LIN_Write(uint8_t id, uint8_t *data, uint8_t len)
-// {
-// 	// Sync, ID, Reg, Data, CRC
-// 	uint8_t frame[11] = {0x55, LIN_PID(id), 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
-// 	// Copy the data into the frame
-// 	for (uint8_t i = 0; i < len; i++)
-// 	{
-// 		frame[i + 2] = data[i];
-// 	}
-
-// 	// Calculate the CRC
-// 	frame[10] = LIN_Checksum(frame + 1, 9); // crc8(frame + 1, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00);
-
-// 	// print bytes
-// 	for (uint8_t i = 0; i < 11; i++)
-// 	{
-// 		printf("0x%02X ", frame[i]);
-// 	}
-// 	printf("\n");
-
-// 	// Send break
-// 	HAL_LIN_SendBreak(&huart4);
-
-// 	HAL_StatusTypeDef status = UART_Write(&huart4, &uart4MutexHandle, frame, 11);
-
-// 	osDelay(10);
-
-// 	return status;
-// }
-
-HAL_StatusTypeDef DDSM400_Write(uint8_t id, uint8_t *data, uint8_t len)
+HAL_StatusTypeDef DDSM400_Message(uint8_t id, uint8_t *tx, uint8_t *rx = nullptr)
 {
-	uint8_t frame[10] = {id, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t tx_frame[10] = {id, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 	// Copy the data into the frame
-	for (uint8_t i = 0; i < len; i++)
+	for (uint8_t i = 0; i < 8; i++)
 	{
-		frame[i + 1] = data[i];
+		tx_frame[i + 1] = tx[i];
 	}
 
 	// Calculate the CRC
-	frame[9] = crc8(frame, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00);
+	tx_frame[9] = crc8(tx_frame, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00);
 
 	// print bytes
 	for (uint8_t i = 0; i < 10; i++)
 	{
-		printf("0x%02X ", frame[i]);
+		printf("0x%02X ", tx_frame[i]);
 	}
 	printf("\n");
 
-	HAL_StatusTypeDef status = UART_Write(&huart4, &uart4MutexHandle, frame, 10);
+	HAL_StatusTypeDef status = UART_Write(&huart4, &uart4MutexHandle, tx_frame, 10, 5);
+
+	uint8_t rx_frame[10] = {0};
+
+	status = UART_Read(&huart4, &uart4MutexHandle, rx_frame, 10, 5);
+
+	// Confirm the CRC
+	uint8_t crc = crc8(rx_frame, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00);
+
+	if (crc != rx_frame[9])
+	{
+		status = HAL_ERROR;
+	}
+
+	// print bytes
+	for (uint8_t i = 0; i < 10; i++)
+	{
+		printf("0x%02X ", rx_frame[i]);
+	}
+	printf("\n");
+
+	if (rx != nullptr)
+	{
+		// Copy the data into the frame
+		for (uint8_t i = 0; i < 8; i++)
+		{
+			rx[i] = rx_frame[i + 1];
+		}
+	}
 
 	osDelay(10);
 
@@ -137,11 +95,6 @@ HAL_StatusTypeDef DDSM400_Write(uint8_t id, uint8_t *data, uint8_t len)
 
 DDSM400::DDSM400(uint8_t id)
 {
-	// uint8_t bytes[10] = {0xAA, 0x55, 0x53, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-	// uint8_t crc8_test = crc8(bytes, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00); // 0x92
-	// printf("CRC-8/MAXIM: 0x%02X\n", crc8_test);
-
 	this->id = id;
 }
 
@@ -153,12 +106,12 @@ void DDSM400::init(uint8_t id, bool set)
 {
 	if (set)
 	{
-		uint8_t data[3] = {0x55, 0x53, id};
+		uint8_t tx[8] = {0x55, 0x53, id, 0, 0, 0, 0, 0};
 
 		// Command the motor to set the ID 5 times
 		for (uint8_t i = 0; i < 5; i++)
 		{
-			HAL_StatusTypeDef status = DDSM400_Write(0xAA, data, 3);
+			HAL_StatusTypeDef status = DDSM400_Message(0xAA, tx);
 		}
 	}
 
@@ -167,9 +120,9 @@ void DDSM400::init(uint8_t id, bool set)
 
 void DDSM400::setMode(DDSM400_MODE mode)
 {
-	uint8_t data[2] = {0xA0, (uint8_t)mode};
+	uint8_t tx[8] = {0xA0, (uint8_t)mode, 0, 0, 0, 0, 0, 0};
 
-	HAL_StatusTypeDef status = DDSM400_Write(id, data, 2);
+	HAL_StatusTypeDef status = DDSM400_Message(id, tx);
 
 	this->mode = mode;
 }
@@ -191,20 +144,147 @@ void DDSM400::disable()
 
 void DDSM400::setSpeed(float speed, float acceleration, bool brake)
 {
-	uint8_t data[8] = {0x64, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t tx[8] = {0x64, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t rx[8] = {0};
 
-	int16_t speed_int = (speed * (30 / M_PI)) * 10;					// rpm
-	uint8_t acceleration_int = 1000 / (acceleration * (30 / M_PI)); // ms/rpm
+	int16_t speed_int = speed * (300 / M_PI);					   // rpm
+	uint8_t acceleration_int = (100 * M_PI) / (3 * acceleration); // ms/rpm
 
 	// Speed
-	data[2] = speed_int & 0xFF;		   // LSB
-	data[1] = (speed_int >> 8) & 0xFF; // MSB
+	tx[2] = speed_int & 0xFF;		 // LSB
+	tx[1] = (speed_int >> 8) & 0xFF; // MSB
 
 	// Acceleration
-	data[5] = acceleration_int;
+	tx[5] = acceleration_int;
 
 	// Brake
-	data[6] = brake ? 0xFF : 0x00;
+	tx[6] = brake ? 0xFF : 0x00;
 
-	HAL_StatusTypeDef status = DDSM400_Write(id, data, 8);
+	HAL_StatusTypeDef status = DDSM400_Message(id, tx, rx);
+
+	// Speed
+	int16_t speed_int_rx = (rx[1] << 8) | rx[2];
+	this->speed = (float)(speed_int_rx * (M_PI / 300));
+
+	// Acceleration
+	uint8_t acceleration_int_rx = rx[5];
+	this->acceleration = (float)((1000 * M_PI) / (3 * acceleration_int_rx));
+
+	// Current
+	uint16_t current_int_rx = (rx[3] << 8) | rx[4];
+	this->current = (float)(current_int_rx / INT16_MAX);
+
+	// Temperature
+	uint8_t temperature_rx = rx[6];
+	this->temperature = temperature_rx;
+
+	// Fault
+	uint8_t fault_rx = rx[7];
+	this->status = (DDSM400_FAULT)fault_rx;
+}
+
+float DDSM400::getSpeed() const
+{
+	return this->speed;
+}
+
+void DDSM400::setPosition(float position)
+{
+	uint8_t tx[8] = {0x62, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t rx[8] = {0};
+
+	uint16_t position_int = position * (INT16_MAX / M_TWOPI);
+
+	// Position
+	tx[2] = position_int & 0xFF;		// LSB
+	tx[1] = (position_int >> 8) & 0xFF; // MSB
+
+	HAL_StatusTypeDef status = DDSM400_Message(id, tx, rx);
+
+	// Speed
+	int16_t speed_int_rx = (rx[1] << 8) | rx[2];
+	this->speed = (float)(speed_int_rx * (M_PI / 300));
+
+	// Acceleration
+	uint8_t acceleration_int_rx = rx[5];
+	this->acceleration = (float)((1000 * M_PI) / (3 * acceleration_int_rx));
+
+	// Current
+	uint16_t current_int_rx = (rx[3] << 8) | rx[4];
+	this->current = (float)(current_int_rx / INT16_MAX);
+
+	// Temperature
+	uint8_t temperature_rx = rx[6];
+	this->temperature = temperature_rx;
+
+	// Fault
+	uint8_t fault_rx = rx[7];
+	this->status = (DDSM400_FAULT)fault_rx;
+}
+
+void DDSM400::setCurrent(float current)
+{
+	uint8_t tx[8] = {0x63, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t rx[8] = {0};
+
+	int16_t current_int = current * INT16_MAX;
+
+	// Current
+	tx[2] = current_int & 0xFF;		   // LSB
+	tx[1] = (current_int >> 8) & 0xFF; // MSB
+
+	HAL_StatusTypeDef status = DDSM400_Message(id, tx, rx);
+
+	// Speed
+	int16_t speed_int_rx = (rx[1] << 8) | rx[2];
+	this->speed = (float)(speed_int_rx * (M_PI / 300));
+
+	// Acceleration
+	uint8_t acceleration_int_rx = rx[5];
+	this->acceleration = (float)((1000 * M_PI) / (3 * acceleration_int_rx));
+
+	// Current
+	uint16_t current_int_rx = (rx[3] << 8) | rx[4];
+	this->current = (float)(current_int_rx / INT16_MAX);
+
+	// Temperature
+	uint8_t temperature_rx = rx[6];
+	this->temperature = (float)temperature_rx;
+
+	// Fault
+	uint8_t fault_rx = rx[7];
+	this->status = (DDSM400_FAULT)fault_rx;
+}
+
+float DDSM400::getCurrent() const
+{
+	return this->current;
+}
+
+void DDSM400::getEncoder(uint32_t *odometer, uint16_t *position)
+{
+	uint8_t tx[8] = {0x74, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t rx[8] = {0};
+
+	HAL_StatusTypeDef status = DDSM400_Message(id, tx, rx);
+
+	// Odometer
+	*odometer = (rx[1] << 24) | (rx[2] << 16) | (rx[3] << 8) | rx[4];
+
+	// Position
+	*position = (rx[5] << 8) | rx[6];
+
+	// Fault
+	uint8_t fault_rx = rx[7];
+	this->status = (DDSM400_FAULT)fault_rx;
+}
+
+uint8_t DDSM400::getTemperature() const
+{
+	return this->temperature;
+}
+
+DDSM400_FAULT DDSM400::getStatus()
+{
+	return this->status;
 }

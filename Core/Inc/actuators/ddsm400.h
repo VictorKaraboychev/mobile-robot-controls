@@ -47,11 +47,11 @@ public:
 	DDSM400_MODE getMode();
 
 	// Set the motor speed (rads/s) -40 to 40 rads/s
-	void setSpeed(float speed, float acceleration = 10, bool brake = false);
+	void setSpeed(float speed, float acceleration = 5, bool brake = false);
 	// Get the motor speed (rads/s)
 	float getSpeed() const;
 
-	// Set the motor position (rad) -2π to 2π rad
+	// Set the motor position (rad) 0 to 2π rad
 	void setPosition(float position);
 	// Get the motor position (rad)
 	float getPosition() const;
@@ -61,10 +61,16 @@ public:
 	// Get the motor current (A)
 	float getCurrent() const;
 
+	// Get the encoder position
+	void getEncoder(uint32_t *odometer, uint16_t *position = nullptr);
+
 	// Enable the motor
 	void enable();
 	// Disable the motor
 	void disable();
+
+	// Get the motor temperature (°C)
+	uint8_t getTemperature() const;
 
 	// Get the motor status
 	DDSM400_FAULT getStatus();
@@ -72,6 +78,12 @@ public:
 private:
 	uint8_t id;
 	DDSM400_MODE mode;
+	DDSM400_FAULT status;
+	float temperature;
+	float current;
+	float speed;
+	float position;
+	float acceleration;
 
 	uint8_t buffer_tx[10];
 	uint8_t buffer_rx[10];

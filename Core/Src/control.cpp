@@ -205,10 +205,6 @@ void StartControlTask(void *argument)
 
 	osDelay(2000);
 
-	motor1.disable();
-	motor3.disable();
-
-
 	while (true)
 	{
 
@@ -249,6 +245,11 @@ void StartControlTask(void *argument)
 
 		// motor1.enable();
 
-		osDelay(100); // 100 Hz
+		uint32_t odometer_left = 0;
+		motor1.getEncoder(&odometer_left);
+
+		printf("Odometer: %lu\n", odometer_left);
+
+		osDelay(50); // 20 Hz
 	}
 }
