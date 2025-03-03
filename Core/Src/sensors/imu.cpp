@@ -91,7 +91,7 @@ void StartIMUTask(void *argument)
 
 	acc_bias[2] += GRAVITY; // Subtract gravity from the z-axis
 
-	printf("Accelerometer Bias: %.2f %.2f %.2f Gyroscope Bias: %.4f %.4f %.4f\n", acc_bias[0], acc_bias[1], acc_bias[2], gyro_bias[0], gyro_bias[1], gyro_bias[2]);
+	// printf("Accelerometer Bias: %.2f %.2f %.2f Gyroscope Bias: %.4f %.4f %.4f\n", acc_bias[0], acc_bias[1], acc_bias[2], gyro_bias[0], gyro_bias[1], gyro_bias[2]);
 
 	while (1)
 	{

@@ -51,6 +51,8 @@ extern "C"
 
   /* USER CODE BEGIN Prototypes */
 
+  void UART_SwapRxTxPins(UART_HandleTypeDef *huart);
+
   HAL_StatusTypeDef UART_Read(UART_HandleTypeDef *huart, osMutexId_t *muart, uint8_t *pData, uint16_t size, uint32_t timeout);
   HAL_StatusTypeDef UART_Write(UART_HandleTypeDef *huart, osMutexId_t *muart, const uint8_t *pData, uint16_t size, uint32_t timeout);
 

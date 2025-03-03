@@ -26,8 +26,6 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
-#include <stdio.h>
-
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -160,7 +158,6 @@ void vApplicationStackOverflowHook(xTaskHandle xTask, signed char *pcTaskName)
   /* Run time stack overflow checking is performed if
   configCHECK_FOR_STACK_OVERFLOW is defined to 1 or 2. This hook function is
   called if a stack overflow is detected. */
-  printf("Stack overflow in task %s\n", pcTaskName);
 }
 /* USER CODE END 4 */
 
@@ -260,7 +257,7 @@ void StartDefaultTask(void *argument)
   /* USER CODE BEGIN StartDefaultTask */
 
   /* Infinite loop */
-  while (true)
+  while (1)
   {
     osDelay(100);
   }

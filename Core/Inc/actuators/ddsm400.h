@@ -12,6 +12,9 @@
 #define DDSM400_CRC_POLY 0x31
 #define DDSM400_CRC_INIT 0x00
 
+#define DDSM400_DEFAULT_ID 0x01
+#define DDSM400_DEFAULT_ACCELERATION 50
+
 enum DDSM400_MODE
 {
 	OPEN = 0x00,
@@ -36,10 +39,10 @@ enum DDSM400_FAULT
 class DDSM400
 {
 public:
-	DDSM400(uint8_t id);
+	DDSM400(UART_HandleTypeDef *huart, osMutexId_t *muart);
 	~DDSM400();
 
-	void init(uint8_t id, bool set = false);
+	void init(uint8_t id = DDSM400_DEFAULT_ID, bool set = false);
 
 	// Set the motor mode
 	void setMode(DDSM400_MODE mode);
@@ -47,22 +50,20 @@ public:
 	DDSM400_MODE getMode();
 
 	// Set the motor speed (rads/s) -40 to 40 rads/s
-	void setSpeed(float speed, float acceleration = 5, bool brake = false);
+	// Set the motor acceleration (rads/s^2) 0 to 100 rads/s^2
+	void setSpeed(float speed, float acceleration = DDSM400_DEFAULT_ACCELERATION, bool brake = false);
 	// Get the motor speed (rads/s)
 	float getSpeed() const;
 
 	// Set the motor position (rad) 0 to 2π rad
 	void setPosition(float position);
 	// Get the motor position (rad)
-	float getPosition() const;
+	float getPosition();
 
 	// Set the motor current (A) -4 to 4 A
 	void setCurrent(float current);
 	// Get the motor current (A)
 	float getCurrent() const;
-
-	// Get the encoder position
-	void getEncoder(uint32_t *odometer, uint16_t *position = nullptr);
 
 	// Enable the motor
 	void enable();
@@ -75,7 +76,12 @@ public:
 	// Get the motor status
 	DDSM400_FAULT getStatus();
 
+	void getEncoder(float *odometer, float *angle);
+
 private:
+	UART_HandleTypeDef *huart;
+	osMutexId_t *muart;
+
 	uint8_t id;
 	DDSM400_MODE mode;
 	DDSM400_FAULT status;
@@ -85,8 +91,11 @@ private:
 	float position;
 	float acceleration;
 
-	uint8_t buffer_tx[10];
+	float initial_position;
+
 	uint8_t buffer_rx[10];
+
+	HAL_StatusTypeDef DDSM400_Message(uint8_t *tx, uint8_t *rx = nullptr);
 };
 
 #endif /* __DDSM400_H__ */

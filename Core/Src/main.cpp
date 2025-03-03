@@ -20,6 +20,7 @@
 #include "main.h"
 #include "cmsis_os.h"
 #include "adc.h"
+#include "dma.h"
 #include "fatfs.h"
 #include "fdcan.h"
 #include "i2c.h"
@@ -127,12 +128,12 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_ADC1_Init();
   MX_FDCAN1_Init();
   MX_I2C1_Init();
   MX_I2C2_Init();
   MX_SDMMC1_SD_Init();
-  MX_SPI1_Init();
   MX_SPI4_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
@@ -145,6 +146,7 @@ int main(void)
   MX_TIM8_Init();
   MX_UART4_Init();
   MX_UART7_Init();
+  MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
 
   MX_USB_DEVICE_Init();

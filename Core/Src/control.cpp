@@ -176,10 +176,13 @@ void setServoAngle(volatile uint32_t *handle, float angle)
 	*handle = pulse_width / MICROSECONDS_PER_TICK; // 250Hz
 }
 
-DDSM400 motor1(0x01); // Front left
-DDSM400 motor2(0x02); // Front right
-DDSM400 motor3(0x03); // Rear left
-DDSM400 motor4(0x04); // Rear right
+extern osMutexId_t uart4MutexHandle;
+extern osMutexId_t uart7MutexHandle;
+
+DDSM400 motor1(&huart4, &uart4MutexHandle); // Front left
+DDSM400 motor2(&huart4, &uart4MutexHandle); // Front right
+DDSM400 motor3(&huart4, &uart4MutexHandle); // Rear left
+DDSM400 motor4(&huart4, &uart4MutexHandle); // Rear right
 
 void StartControlTask(void *argument)
 {
@@ -194,16 +197,20 @@ void StartControlTask(void *argument)
 
 	osDelay(2000); // Wait for the sensors to initialize
 
+	motor1.init(0x01);
+	// motor2.init(0x02);
+	motor3.init(0x03);
+	// motor4.init(0x04);
+
 	motor1.enable();
 	motor3.enable();
 
-	motor1.setMode(DDSM400_MODE::SPEED);
-	motor3.setMode(DDSM400_MODE::SPEED);
+	motor1.setSpeed(20);
+	motor3.setSpeed(20);
 
-	motor1.setSpeed(5);
-	motor3.setSpeed(5);
-
-	osDelay(2000);
+	float odometer = 0, angle = 0;
+	float time = 0;
+	float initial_time = HAL_GetTick() / 1000.0f;
 
 	while (true)
 	{
@@ -241,15 +248,12 @@ void StartControlTask(void *argument)
 		// 	right_velocity *= MAX_SPEED / max_velocity;
 		// }
 
-		// motor1.setSpeed(5);
+		motor1.getEncoder(&odometer, &angle);
+		time = (HAL_GetTick() / 1000.0f) - initial_time;
 
-		// motor1.enable();
+		// CSV print
+		printf("%.2f, %.4f, %.4f\n", time, odometer, angle);
 
-		uint32_t odometer_left = 0;
-		motor1.getEncoder(&odometer_left);
-
-		printf("Odometer: %lu\n", odometer_left);
-
-		osDelay(50); // 20 Hz
+		osDelay(20); // 50 Hz
 	}
 }
