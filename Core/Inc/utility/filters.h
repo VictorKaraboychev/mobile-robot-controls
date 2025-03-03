@@ -9,7 +9,7 @@ public:
 	Filter() {}
 	virtual ~Filter() {}
 
-	virtual float update(float input) = 0;
+	virtual float process(float input) = 0;
 };
 
 class LowPassFilter : public Filter
@@ -19,7 +19,7 @@ public:
 	LowPassFilter(float cutoffFrequency, float sampleRate)
 	{
 		float dt = 1.0f / sampleRate;
-		float RC = 1.0f / (M_TWOPI * cutoffFrequency);
+		float RC = 1.0f / (2.0f * M_PI * cutoffFrequency);
 		this->alpha = dt / (RC + dt);
 		this->output = 0.0f;
 		this->initialized = false;
@@ -28,7 +28,7 @@ public:
 	virtual ~LowPassFilter() {}
 
 	// Update the filter with a new input sample and return the filtered output.
-	virtual float update(float input)
+	virtual float process(float input)
 	{
 		if (!this->initialized)
 		{
@@ -55,7 +55,7 @@ public:
 	HighPassFilter(float cutoffFrequency, float sampleRate)
 	{
 		float dt = 1.0f / sampleRate;
-		float RC = 1.0f / (M_TWOPI * cutoffFrequency);
+		float RC = 1.0f / (2.0f * M_PI * cutoffFrequency);
 		this->alpha = RC / (RC + dt);
 		this->output = 0.0f;
 		this->prevInput = 0.0f;
@@ -65,7 +65,7 @@ public:
 	virtual ~HighPassFilter() {}
 
 	// Update the filter with a new input sample and return the filtered output.
-	virtual float update(float input)
+	virtual float process(float input)
 	{
 		if (!this->initialized)
 		{
@@ -104,10 +104,10 @@ public:
 	virtual ~BandPassFilter() {}
 
 	// The update function cascades the high-pass and low-pass filters.
-	virtual float update(float input)
+	virtual float process(float input)
 	{
-		float highPassed = hp.update(input);
-		float bandPassed = lp.update(highPassed);
+		float highPassed = hp.process(input);
+		float bandPassed = lp.process(highPassed);
 		return bandPassed;
 	}
 
@@ -129,9 +129,9 @@ public:
 	virtual ~BandRejectFilter() {}
 
 	// The update function subtracts the bandpass output from the input.
-	virtual float update(float input)
+	virtual float process(float input)
 	{
-		float bandComponent = bp.update(input);
+		float bandComponent = bp.process(input);
 		// The rejected signal is the input minus the frequencies in the band.
 		float output = input - bandComponent;
 		return output;
