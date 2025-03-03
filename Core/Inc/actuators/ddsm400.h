@@ -15,6 +15,8 @@
 #define DDSM400_DEFAULT_ID 0x01
 #define DDSM400_DEFAULT_ACCELERATION 50
 
+#define DDSM400_POSITION_OFFSET (0.2 * M_PI)
+
 enum DDSM400_MODE
 {
 	OPEN = 0x00,
@@ -90,10 +92,6 @@ private:
 	float speed;
 	float position;
 	float acceleration;
-
-	float initial_position;
-
-	uint8_t buffer_rx[10];
 
 	HAL_StatusTypeDef DDSM400_Message(uint8_t *tx, uint8_t *rx = nullptr);
 };

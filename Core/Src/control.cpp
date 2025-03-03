@@ -113,13 +113,13 @@ void StartFusionTask(void *argument)
 
 	osDelay(2000); // Wait for the sensors to initialize
 
-	uint64_t last_time = HAL_GetTick();
+	uint32_t last_time = osKernelGetTickCount();
 	osDelay(10); // 100 Hz
 
 	while (true)
 	{
-		float delta_time = (HAL_GetTick() - last_time) / 1000.0f;
-		last_time = HAL_GetTick();
+		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
+		last_time = osKernelGetTickCount();
 
 		// Create the control vector
 		EKF::ControlVector u{delta_time};
@@ -158,7 +158,7 @@ void StartFusionTask(void *argument)
 		robot.orientation = Eigen::Vector3f{x[3], x[4], x[5]};
 		robot.angular_velocity = Eigen::Vector3f{x[9], x[10], x[11]};
 
-		osDelay(4); // 250 Hz
+		osDelayUntil(last_time + 4); // 250 Hz
 	}
 }
 
@@ -208,12 +208,17 @@ void StartControlTask(void *argument)
 	motor1.setSpeed(20);
 	motor3.setSpeed(20);
 
-	float odometer = 0, angle = 0;
+	float left_position = 0;
 	float time = 0;
-	float initial_time = HAL_GetTick() / 1000.0f;
+
+	float initial_time = osKernelGetTickCount() / 1000.0f;
+	uint32_t last_time = osKernelGetTickCount();
 
 	while (true)
 	{
+		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
+		last_time = osKernelGetTickCount();
+
 
 		// angle += velocity;
 
@@ -248,12 +253,12 @@ void StartControlTask(void *argument)
 		// 	right_velocity *= MAX_SPEED / max_velocity;
 		// }
 
-		motor1.getEncoder(&odometer, &angle);
-		time = (HAL_GetTick() / 1000.0f) - initial_time;
+		left_position = motor1.getPosition();
+		time = (osKernelGetTickCount() / 1000.0f) - initial_time;
 
 		// CSV print
-		printf("%.2f, %.4f, %.4f\n", time, odometer, angle);
+		printf("%.2f, %.4f\n", time, left_position);
 
-		osDelay(20); // 50 Hz
+		osDelayUntil(last_time + 20); // 50 Hz
 	}
 }

@@ -38,6 +38,8 @@ uint8_t crc8(uint8_t const *data, size_t data_size, uint8_t poly, uint8_t init, 
 
 HAL_StatusTypeDef DDSM400::DDSM400_Message(uint8_t *tx, uint8_t *rx)
 {
+	HAL_StatusTypeDef status = HAL_OK;
+
 	uint8_t tx_frame[10] = {this->id, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 	// Copy the data into the frame
@@ -56,11 +58,14 @@ HAL_StatusTypeDef DDSM400::DDSM400_Message(uint8_t *tx, uint8_t *rx)
 	// }
 	// printf("\n");
 
-	HAL_StatusTypeDef status = UART_Write(this->huart, this->muart, tx_frame, 10, 5);
+	status = UART_Write(this->huart, this->muart, tx_frame, 10, 5);
 
-	// Wait for last byte to physically leave the line
-	while (__HAL_UART_GET_FLAG(huart, UART_FLAG_TC) == RESET)
-		;
+	if (rx == nullptr)
+	{
+		osDelay(5);
+
+		return status;
+	}
 
 	uint8_t rx_frame[10] = {0};
 
@@ -69,20 +74,7 @@ HAL_StatusTypeDef DDSM400::DDSM400_Message(uint8_t *tx, uint8_t *rx)
 	// Check the status
 	if (status != HAL_OK)
 	{
-		switch (status)
-		{
-		case HAL_TIMEOUT:
-			printf("Timeout\n");
-			break;
-		case HAL_BUSY:
-			printf("Busy\n");
-			break;
-		case HAL_ERROR:
-			printf("Error\n");
-			break;
-		default:
-			break;
-		}
+		return status;
 	}
 
 	// Confirm the CRC
@@ -91,7 +83,7 @@ HAL_StatusTypeDef DDSM400::DDSM400_Message(uint8_t *tx, uint8_t *rx)
 	if (crc != rx_frame[9])
 	{
 		printf("CRC Error\n");
-		status = HAL_ERROR;
+		return HAL_ERROR;
 	}
 
 	// // print bytes
@@ -101,16 +93,13 @@ HAL_StatusTypeDef DDSM400::DDSM400_Message(uint8_t *tx, uint8_t *rx)
 	// }
 	// printf("\n");
 
-	if (rx != nullptr)
+	// Copy the data into the frame
+	for (uint8_t i = 0; i < 8; i++)
 	{
-		// Copy the data into the frame
-		for (uint8_t i = 0; i < 8; i++)
-		{
-			rx[i] = rx_frame[i + 1];
-		}
+		rx[i] = rx_frame[i + 1];
 	}
 
-	osDelay(10);
+	osDelay(2);
 
 	return status;
 }
@@ -122,8 +111,6 @@ DDSM400::DDSM400(UART_HandleTypeDef *huart, osMutexId_t *muart)
 
 	this->mode = DDSM400_MODE::DISABLED;
 	this->status = DDSM400_FAULT::NONE;
-
-	this->initial_position = 0;
 }
 
 DDSM400::~DDSM400()
@@ -146,7 +133,6 @@ void DDSM400::init(uint8_t id, bool set)
 	}
 
 	this->id = id;
-	this->initial_position = 0.635;
 }
 
 void DDSM400::setMode(DDSM400_MODE mode)
@@ -276,7 +262,7 @@ float DDSM400::getPosition()
 	// Position
 	uint32_t position_int = (rx[5] << 8) | rx[6];
 
-	this->position = fmodf((float)position_int * (M_TWOPI / INT16_MAX) + this->initial_position, M_TWOPI) + (float)(odometer_int * M_TWOPI);
+	this->position = fmodf((float)position_int * (M_TWOPI / INT16_MAX) + DDSM400_POSITION_OFFSET, M_TWOPI) + (float)(odometer_int * M_TWOPI) - DDSM400_POSITION_OFFSET;
 
 	// Fault
 	uint8_t fault_rx = rx[7];
