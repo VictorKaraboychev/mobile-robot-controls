@@ -13,13 +13,10 @@
 
 #include <stdio.h>
 
-#define SERVO_1 &htim12.Instance->CCR2
-#define SERVO_2 &htim12.Instance->CCR1
-
 #define KALMAN_STATE_SIZE 15
 #define KALMAN_CONTROL_SIZE 1
 
-#define SENSOR_COUNT 3
+#define SENSOR_COUNT 1
 
 using EKF = ExtendedKalmanFilter<float, KALMAN_STATE_SIZE, KALMAN_CONTROL_SIZE>;
 
@@ -39,6 +36,8 @@ struct Sensor
 #include "magnetometer.h"
 
 #include "ddsm400.h"
+#include "servo.h"
+#include "pid.h"
 
 struct RobotState
 {
@@ -54,5 +53,6 @@ extern EKF ekf;
 
 void StartFusionTask(void *argument);
 void StartControlTask(void *argument);
+void StartCommTask(void *argument);
 
 #endif /* __CONTROL_H__ */

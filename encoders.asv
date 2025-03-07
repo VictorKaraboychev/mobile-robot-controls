@@ -1,6 +1,6 @@
 time = encoderdata1.Var1;      % Extract time column
 position = encoderdata1.Var2;  % Extract position column
-real_velocity = encoderdata1.Var3;
+real_velocity = encoderdata1.Var4;
 
 % Compute velocity (numerical derivative)
 velocity = diff(position) ./ diff(time);

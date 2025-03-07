@@ -22,44 +22,44 @@
 #define __USART_H__
 
 #ifdef __cplusplus
-extern "C"
-{
+extern "C" {
 #endif
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 
-  /* USER CODE BEGIN Includes */
+/* USER CODE BEGIN Includes */
 
 #include "cmsis_os.h"
 
-  /* USER CODE END Includes */
+/* USER CODE END Includes */
 
-  extern UART_HandleTypeDef huart4;
+extern UART_HandleTypeDef huart4;
 
-  extern UART_HandleTypeDef huart7;
+extern UART_HandleTypeDef huart7;
 
-  extern UART_HandleTypeDef huart8;
+extern UART_HandleTypeDef huart8;
 
-  /* USER CODE BEGIN Private defines */
+/* USER CODE BEGIN Private defines */
 
-  /* USER CODE END Private defines */
+/* USER CODE END Private defines */
 
-  void MX_UART4_Init(void);
-  void MX_UART7_Init(void);
-  void MX_UART8_Init(void);
+void MX_UART4_Init(void);
+void MX_UART7_Init(void);
+void MX_UART8_Init(void);
 
-  /* USER CODE BEGIN Prototypes */
+/* USER CODE BEGIN Prototypes */
 
-  void UART_SwapRxTxPins(UART_HandleTypeDef *huart);
+  void UART_SwapRxTxPins(UART_HandleTypeDef *huart, uint8_t swap);
 
-  HAL_StatusTypeDef UART_Read(UART_HandleTypeDef *huart, osMutexId_t *muart, uint8_t *pData, uint16_t size, uint32_t timeout);
-  HAL_StatusTypeDef UART_Write(UART_HandleTypeDef *huart, osMutexId_t *muart, const uint8_t *pData, uint16_t size, uint32_t timeout);
+  HAL_StatusTypeDef UART_Read(UART_HandleTypeDef *huart, osMutexId_t *muart, uint8_t *rx, uint16_t size, uint32_t timeout);
+  HAL_StatusTypeDef UART_Write(UART_HandleTypeDef *huart, osMutexId_t *muart, const uint8_t *tx, uint16_t size, uint32_t timeout);
 
-  /* USER CODE END Prototypes */
+/* USER CODE END Prototypes */
 
 #ifdef __cplusplus
 }
 #endif
 
 #endif /* __USART_H__ */
+

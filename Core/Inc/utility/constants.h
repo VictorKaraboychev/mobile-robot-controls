@@ -14,4 +14,6 @@
 #define TARGET_SPEED 0.5f // m/s
 #define MAX_SPEED 1.5f	  // m/s
 
+#define MAX_ACCELERATION 1.0f // m/s^2
+
 #endif /* __CONSTANTS_H__ */

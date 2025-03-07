@@ -66,6 +66,8 @@ void StartDebugTask(void *argument)
 			// 	   robot.orientation[0] * RAD_TO_DEG, robot.orientation[1] * RAD_TO_DEG, robot.orientation[2] * RAD_TO_DEG,
 			// 	   robot.angular_velocity[0] * RAD_TO_DEG, robot.angular_velocity[1] * RAD_TO_DEG, robot.angular_velocity[2] * RAD_TO_DEG);
 
+			printf("[DEBUG]: %.2f %.2f %.2f \n", robot.orientation[0] * RAD_TO_DEG, robot.orientation[1] * RAD_TO_DEG, robot.orientation[2] * RAD_TO_DEG);
+
 			last_time = HAL_GetTick();
 		}
 

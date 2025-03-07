@@ -99,7 +99,7 @@ EKF::ProcessCovariance Q = Eigen::DiagonalMatrix<float, KALMAN_STATE_SIZE>{
 };
 
 // Sensors
-Sensor *sensors[SENSOR_COUNT] = {&accelerometer, &gyroscope, &barometer};
+Sensor *sensors[SENSOR_COUNT] = {&gyroscope};
 
 EKF ekf(f, F, Q);
 RobotState robot;
@@ -162,54 +162,116 @@ void StartFusionTask(void *argument)
 	}
 }
 
-#define SERVO_MIN_PULSE_WIDTH 500
-#define SERVO_MAX_PULSE_WIDTH 2500
-#define SERVO_MAX_ANGLE 270
-#define MICROSECONDS_PER_TICK 1
+PID turnPID(0.5f, 0.01f, 0.0f, -0.2f, 0.2f, -0.2f, 0.2f);
 
-void setServoAngle(volatile uint32_t *handle, float angle)
-{
-	// Calculate the pulse width
-	uint32_t pulse_width = SERVO_MIN_PULSE_WIDTH + (SERVO_MAX_PULSE_WIDTH - SERVO_MIN_PULSE_WIDTH) * (angle / SERVO_MAX_ANGLE);
-
-	// Set the pulse width
-	*handle = pulse_width / MICROSECONDS_PER_TICK; // 250Hz
-}
+Servo servo1(&htim12, TIM_CHANNEL_2, 270, 0);
 
 extern osMutexId_t uart4MutexHandle;
 extern osMutexId_t uart7MutexHandle;
 
 DDSM400 motor1(&huart4, &uart4MutexHandle); // Front left
-DDSM400 motor2(&huart4, &uart4MutexHandle); // Front right
+DDSM400 motor2(&huart7, &uart7MutexHandle); // Front right
 DDSM400 motor3(&huart4, &uart4MutexHandle); // Rear left
-DDSM400 motor4(&huart4, &uart4MutexHandle); // Rear right
+DDSM400 motor4(&huart7, &uart7MutexHandle); // Rear right
 
-void StartControlTask(void *argument)
+volatile float left_speed = 0;
+volatile float right_speed = 0;
+
+void LeftMotorTask(void *argument)
 {
-	// HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_1);
-	// HAL_TIM_PWM_Start(&htim12, TIM_CHANNEL_2);
-
-	// const float min_angle = 0.0f;
-	// const float max_angle = 180.0f;
-	// float angle = 0.0f;
-
-	// float velocity = 1.0f;
-
-	osDelay(2000); // Wait for the sensors to initialize
-
+	// Motor Initialization
 	motor1.init(0x01);
-	// motor2.init(0x02);
 	motor3.init(0x03);
-	// motor4.init(0x04);
 
+	// Enable the motors
 	motor1.enable();
 	motor3.enable();
 
-	motor1.setSpeed(20);
-	motor3.setSpeed(20);
+	// Set the default acceleration
+	float rotational_acceleration = MAX_ACCELERATION / WHEEL_RADIUS;
 
-	float left_position = 0;
-	float time = 0;
+	motor1.setDefaultAcceleration(rotational_acceleration);
+	motor3.setDefaultAcceleration(rotational_acceleration);
+
+	uint32_t last_time = osKernelGetTickCount();
+
+	while (true)
+	{
+		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
+		last_time = osKernelGetTickCount();
+
+		float left_rotational_velocity = left_speed / WHEEL_RADIUS;
+
+		motor1.setVelocity(left_rotational_velocity);
+		motor3.setVelocity(left_rotational_velocity);
+
+		float left_encoder_position = motor1.getPosition() * WHEEL_RADIUS;
+		float left_encoder_speed = motor1.getVelocity() * WHEEL_RADIUS;
+
+		osDelayUntil(last_time + 25); // 40 Hz
+	}
+}
+
+void RightMotorTask(void *argument)
+{
+	// Motor Initialization
+	motor2.init(0x02);
+	motor4.init(0x04);
+
+	// Enable the motors
+	motor2.enable();
+	motor4.enable();
+
+	// Set the default acceleration
+	float rotational_acceleration = MAX_ACCELERATION / WHEEL_RADIUS;
+
+	motor2.setDefaultAcceleration(rotational_acceleration);
+	motor4.setDefaultAcceleration(rotational_acceleration);
+
+	uint32_t last_time = osKernelGetTickCount();
+
+	while (true)
+	{
+		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
+		last_time = osKernelGetTickCount();
+
+		float right_rotational_velocity = right_speed / WHEEL_RADIUS;
+
+		motor2.setVelocity(-right_rotational_velocity);
+		motor4.setVelocity(-right_rotational_velocity);
+
+		float right_encoder_position = motor2.getPosition() * WHEEL_RADIUS;
+		float right_encoder_speed = motor2.getVelocity() * WHEEL_RADIUS;
+
+		osDelayUntil(last_time + 25); // 40 Hz
+	}
+}
+
+void StartControlTask(void *argument)
+{
+	// Motor Tasks
+	xTaskCreate(LeftMotorTask, "LeftMotorTask", 256, NULL, 2, NULL);
+	xTaskCreate(RightMotorTask, "RightMotorTask", 256, NULL, 2, NULL);
+
+	// // Servo Initialization
+	// servo1.init();
+
+	// osDelay(10000);
+
+	// servo1.setAngle(228);
+
+	// osDelay(2000);
+
+	// servo1.setAngle(45);
+
+	// osDelay(2000);
+
+	// servo1.setAngle(230);
+
+	// osDelay(1000);
+
+	// Gyro calibration takes 5 seconds, wait for it to finish
+	osDelay(10000);
 
 	float initial_time = osKernelGetTickCount() / 1000.0f;
 	uint32_t last_time = osKernelGetTickCount();
@@ -218,7 +280,6 @@ void StartControlTask(void *argument)
 	{
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
-
 
 		// angle += velocity;
 
@@ -253,12 +314,36 @@ void StartControlTask(void *argument)
 		// 	right_velocity *= MAX_SPEED / max_velocity;
 		// }
 
-		left_position = motor1.getPosition();
-		time = (osKernelGetTickCount() / 1000.0f) - initial_time;
+		// float time = (osKernelGetTickCount() / 1000.0f) - initial_time;
+
+		// float speed = 0.5f * sinf(0.2 * M_PI * time);
+
+		// left_speed = speed;
+		// right_speed = speed;
+
+		float speed = turnPID.update(M_PI_2, robot.orientation[0], delta_time);
+
+		left_speed = speed + 0.3;
+		right_speed = -speed + 0.3;
 
 		// CSV print
-		printf("%.2f, %.4f\n", time, left_position);
+		// printf("%.2f, %.4f, %.4f\n", time, left_position, left_speed);
 
 		osDelayUntil(last_time + 20); // 50 Hz
+	}
+}
+
+void StartCommTask(void *argument)
+{
+	uint32_t last_time = osKernelGetTickCount();
+
+	while (true)
+	{
+		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
+		last_time = osKernelGetTickCount();
+
+		// printf("Hello, world!\n");
+
+		osDelayUntil(last_time + 1000); // 1 Hz
 	}
 }

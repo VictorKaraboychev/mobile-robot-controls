@@ -103,6 +103,13 @@ const osThreadAttr_t magTask_attributes = {
     .stack_size = 2048 * 4,
     .priority = (osPriority_t)osPriorityNormal,
 };
+/* Definitions for commTask */
+osThreadId_t commTaskHandle;
+const osThreadAttr_t commTask_attributes = {
+    .name = "commTask",
+    .stack_size = 512 * 4,
+    .priority = (osPriority_t)osPriorityNormal,
+};
 /* Definitions for spi1Mutex */
 osMutexId_t spi1MutexHandle;
 const osMutexAttr_t spi1Mutex_attributes = {
@@ -145,6 +152,7 @@ extern void StartControlTask(void *argument);
 extern void StartBarometerTask(void *argument);
 extern void StartIMUTask(void *argument);
 extern void StartMagTask(void *argument);
+extern void StartCommTask(void *argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -233,6 +241,9 @@ void MX_FREERTOS_Init(void)
 
   /* creation of magTask */
   magTaskHandle = osThreadNew(StartMagTask, NULL, &magTask_attributes);
+
+  /* creation of commTask */
+  commTaskHandle = osThreadNew(StartCommTask, NULL, &commTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
