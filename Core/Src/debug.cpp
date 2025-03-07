@@ -44,11 +44,11 @@ void StartDebugTask(void *argument)
 
 	bool all_sensors_active = false;
 
-	uint32_t last_time = HAL_GetTick();
+	uint32_t last_time = osKernelGetTickCount();
 
 	while (true)
 	{
-		float elapsed_time = (HAL_GetTick() - last_time) / 1000.0f;
+		float elapsed_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 
 		// Print every 0.5s
 		if (elapsed_time >= 0.5f && print_level <= PL_DEBUG)
@@ -66,9 +66,8 @@ void StartDebugTask(void *argument)
 			// 	   robot.orientation[0] * RAD_TO_DEG, robot.orientation[1] * RAD_TO_DEG, robot.orientation[2] * RAD_TO_DEG,
 			// 	   robot.angular_velocity[0] * RAD_TO_DEG, robot.angular_velocity[1] * RAD_TO_DEG, robot.angular_velocity[2] * RAD_TO_DEG);
 
-			printf("[DEBUG]: %.2f %.2f %.2f \n", robot.orientation[0] * RAD_TO_DEG, robot.orientation[1] * RAD_TO_DEG, robot.orientation[2] * RAD_TO_DEG);
-
-			last_time = HAL_GetTick();
+			// printf("[DEBUG]: %.2f %.2f %.2f \n", robot.orientation[0] * RAD_TO_DEG, robot.orientation[1] * RAD_TO_DEG, robot.orientation[2] * RAD_TO_DEG);
+			last_time = osKernelGetTickCount();
 		}
 
 		// Reset the LEDs and buzzer
@@ -110,12 +109,12 @@ void StartDebugTask(void *argument)
 		}
 
 		// If the magnetometer is calibrating beep the buzzer
-		if (magnetometer_data.is_calibrating)
+		if (accelerometer_data.is_calibrating || magnetometer_data.is_calibrating)
 		{
-			// setPWM(BUZZER, LOW_POWER, FAST_BLINK);
+			setPWM(BUZZER, LOW_POWER, FAST_BLINK);
 			setPWM(GREEN_LED2, MEDIUM_POWER, FAST_BLINK);
 		}
 
-		osDelay(10);
+		osDelay(10); // 100 Hz
 	}
 }

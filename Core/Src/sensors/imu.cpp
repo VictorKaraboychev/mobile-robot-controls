@@ -71,6 +71,9 @@ void StartIMUTask(void *argument)
 	LSM6DSO_Axes_t acc, gyro;
 	bool status = false;
 
+	accelerometer_data.is_calibrating = true;
+	gyroscope_data.is_calibrating = true;
+
 	// Calibrate the IMU
 	const uint16_t samples = 1000;
 	Eigen::Vector3f acc_bias, gyro_bias;
@@ -90,6 +93,9 @@ void StartIMUTask(void *argument)
 	gyro_bias *= (gyro_scale / (float)samples);
 
 	acc_bias[2] += GRAVITY; // Subtract gravity from the z-axis
+
+	accelerometer_data.is_calibrating = false;
+	gyroscope_data.is_calibrating = false;
 
 	// printf("Accelerometer Bias: %.2f %.2f %.2f Gyroscope Bias: %.4f %.4f %.4f\n", acc_bias[0], acc_bias[1], acc_bias[2], gyro_bias[0], gyro_bias[1], gyro_bias[2]);
 

@@ -271,7 +271,31 @@ void StartControlTask(void *argument)
 	// osDelay(1000);
 
 	// Gyro calibration takes 5 seconds, wait for it to finish
-	osDelay(10000);
+	osDelay(6000);
+
+	// Drive forward for 1 second
+	left_speed = 0.25f;
+	right_speed = 0.25f;
+
+	osDelay(1000);
+
+	// Stop for 1 second
+	left_speed = 0;
+	right_speed = 0;
+
+	osDelay(1000);
+
+	// Drive backward for 1 second
+
+	left_speed = -0.25f;
+	right_speed = -0.25f;
+
+	osDelay(1000);
+
+	// Stop for 1 second
+
+	left_speed = 0;
+	right_speed = 0;
 
 	float initial_time = osKernelGetTickCount() / 1000.0f;
 	uint32_t last_time = osKernelGetTickCount();
@@ -323,8 +347,8 @@ void StartControlTask(void *argument)
 
 		float speed = turnPID.update(M_PI_2, robot.orientation[0], delta_time);
 
-		left_speed = speed + 0.3;
-		right_speed = -speed + 0.3;
+		left_speed = speed;
+		right_speed = -speed;
 
 		// CSV print
 		// printf("%.2f, %.4f, %.4f\n", time, left_position, left_speed);

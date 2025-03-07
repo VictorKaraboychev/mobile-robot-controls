@@ -23,6 +23,8 @@ struct AccelerometerData
 
 	bool active;
 	bool data_ready;
+
+	bool is_calibrating;
 };
 
 struct GyroscopeData
@@ -31,6 +33,8 @@ struct GyroscopeData
 
 	bool active;
 	bool data_ready;
+
+	bool is_calibrating;
 };
 
 extern AccelerometerData accelerometer_data;
