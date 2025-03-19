@@ -5,6 +5,7 @@
 #include "cmsis_os.h"
 #include "tim.h"
 #include "usart.h"
+#include "i2c.h"
 
 #include <Eigen/Dense>
 #include "constants.h"

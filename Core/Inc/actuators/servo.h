@@ -2,6 +2,7 @@
 #define __SERVO_H__
 
 #include <cmath>
+#include "motion_profile.h"
 
 #include "tim.h"
 
@@ -23,29 +24,39 @@ public:
 	}
 	~Servo() {}
 
-	void init()
+	void init(float initial_angle = 0.0f)
 	{
 		// Initialize the servo timer
 		HAL_TIM_PWM_Start(this->htim, this->channel);
+
+		// Set the initial angle
+		this->angle = initial_angle;
 	}
 
-	// Set the servo angle in degrees, velocity in degrees/s^2
-	void setAngle(float angle, float velocity = 0.0f)
+	// Set the servo angle in degrees, speed in degrees/s
+	void setAngle(float angle, float speed = 0.0f)
 	{
 		// Constrain the angle to the valid range
 		float limited_angle = fminf(fmaxf(angle, min_angle), max_angle);
 
-		float travel_time = (limited_angle - this->angle) / velocity;
+		this->profile = TrapezoidalMotionProfile(speed, 100.0f);
+
+		this->profile.init(this->angle);
+		this->profile.setTarget(limited_angle);
 
 		uint32_t last_time = osKernelGetTickCount();
 
-		while (this->angle != limited_angle)
+		while (fabsf(this->angle - limited_angle) > 0.1f)
 		{
 			// Calculate the delta time
 			float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 			last_time = osKernelGetTickCount();
 
-			this->angle += limited_angle;
+			// Update the profile
+			this->profile.update(delta_time);
+
+			// Update the angle
+			this->angle = this->profile.getPosition();
 
 			// Calculate the pulse width
 			uint32_t pulse_width = min_pulse_width + (max_pulse_width - min_pulse_width) * (this->angle / max_angle);
@@ -61,6 +72,8 @@ public:
 private:
 	TIM_HandleTypeDef *htim;
 	uint32_t channel;
+
+	TrapezoidalMotionProfile profile;
 
 	float angle;
 

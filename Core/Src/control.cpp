@@ -253,49 +253,78 @@ void StartControlTask(void *argument)
 	xTaskCreate(LeftMotorTask, "LeftMotorTask", 256, NULL, 2, NULL);
 	xTaskCreate(RightMotorTask, "RightMotorTask", 256, NULL, 2, NULL);
 
-	// // Servo Initialization
-	// servo1.init();
-
-	// osDelay(10000);
-
-	// servo1.setAngle(228);
-
-	// osDelay(2000);
-
-	// servo1.setAngle(45);
-
-	// osDelay(2000);
-
-	// servo1.setAngle(230);
-
-	// osDelay(1000);
-
 	// Gyro calibration takes 5 seconds, wait for it to finish
 	osDelay(6000);
 
-	// Drive forward for 1 second
+	// Servo Initialization
+	servo1.init(45);
+
 	left_speed = 0.25f;
 	right_speed = 0.25f;
 
 	osDelay(1000);
 
-	// Stop for 1 second
 	left_speed = 0;
 	right_speed = 0;
 
+	servo1.setAngle(228, 40.0f);
+
+	osDelay(500);
+
+	servo1.setAngle(45, 40.0f);
+
+	left_speed = 0.25f;
+	right_speed = 0.25f;
+
 	osDelay(1000);
 
-	// Drive backward for 1 second
+	left_speed = 0;
+	right_speed = 0;
+
+	servo1.setAngle(230, 40.0f);
+
+	osDelay(500);
+
+	servo1.setAngle(220, 40.0f);
+
+	left_speed = -0.05f;
+	right_speed = -0.05f;
+
+	osDelay(5000);
 
 	left_speed = -0.25f;
 	right_speed = -0.25f;
 
 	osDelay(1000);
 
-	// Stop for 1 second
-
 	left_speed = 0;
 	right_speed = 0;
+
+	servo1.setAngle(45, 40.0f);
+
+	// // Drive forward for 1 second
+	// left_speed = 0.25f;
+	// right_speed = 0.25f;
+
+	// osDelay(1000);
+
+	// // Stop for 1 second
+	// left_speed = 0;
+	// right_speed = 0;
+
+	// osDelay(1000);
+
+	// // Drive backward for 1 second
+
+	// left_speed = -0.25f;
+	// right_speed = -0.25f;
+
+	// osDelay(1000);
+
+	// // Stop for 1 second
+
+	// left_speed = 0;
+	// right_speed = 0;
 
 	float initial_time = osKernelGetTickCount() / 1000.0f;
 	uint32_t last_time = osKernelGetTickCount();
@@ -345,10 +374,10 @@ void StartControlTask(void *argument)
 		// left_speed = speed;
 		// right_speed = speed;
 
-		float speed = turnPID.update(M_PI_2, robot.orientation[0], delta_time);
+		// float speed = turnPID.update(M_PI_2, robot.orientation[0], delta_time);
 
-		left_speed = speed;
-		right_speed = -speed;
+		// left_speed = speed;
+		// right_speed = -speed;
 
 		// CSV print
 		// printf("%.2f, %.4f, %.4f\n", time, left_position, left_speed);
@@ -357,16 +386,62 @@ void StartControlTask(void *argument)
 	}
 }
 
+// I2C Communication
+const uint8_t byte_count = 13;
+uint8_t rx[byte_count];
+
+void I2C_ListenCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	HAL_I2C_EnableListen_IT(hi2c);
+}
+
+void I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, uint16_t AddrMatchCode)
+{
+	if (TransferDirection == I2C_DIRECTION_TRANSMIT) // if the master wants to transmit the data
+	{
+		HAL_I2C_Slave_Sequential_Receive_IT(hi2c, rx, byte_count, I2C_FIRST_AND_LAST_FRAME);
+	}
+	else // master requesting the data is not supported yet
+	{
+		Error_Handler();
+	}
+}
+
+void I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	uint8_t command = rx[0];
+
+	// Next 4 bytes are the float value in IEEE 754 format
+	float dx = 0;
+	memcpy(&dx, &rx[1], 4);
+
+	// Next 4 bytes are the float value in IEEE 754 format
+	float dy = 0;
+	memcpy(&dy, &rx[5], 4);
+
+	// Next 4 bytes are the float value in IEEE 754 format
+	float theta = 0;
+	memcpy(&theta, &rx[9], 4);
+
+	printf("Command: %d, dx: %.2f, dy: %.2f, theta: %.2f\n", command, dx, dy, theta);
+}
+
 void StartCommTask(void *argument)
 {
 	uint32_t last_time = osKernelGetTickCount();
+
+	hi2c1.ListenCpltCallback = I2C_ListenCpltCallback;
+	hi2c1.AddrCallback = I2C_AddrCallback;
+	hi2c1.SlaveRxCpltCallback = I2C_SlaveRxCpltCallback;
+
+	HAL_I2C_EnableListen_IT(&hi2c1);
 
 	while (true)
 	{
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
 
-		// printf("Hello, world!\n");
+		printf("Hello, world!\n");
 
 		osDelayUntil(last_time + 1000); // 1 Hz
 	}

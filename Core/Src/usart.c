@@ -55,7 +55,7 @@ void MX_UART4_Init(void)
   huart4.Init.OverSampling = UART_OVERSAMPLING_16;
   huart4.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart4.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_TXINVERT_INIT | UART_ADVFEATURE_RXINVERT_INIT;
+  huart4.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_TXINVERT_INIT|UART_ADVFEATURE_RXINVERT_INIT;
   huart4.AdvancedInit.TxPinLevelInvert = UART_ADVFEATURE_TXINV_ENABLE;
   huart4.AdvancedInit.RxPinLevelInvert = UART_ADVFEATURE_RXINV_ENABLE;
   if (HAL_UART_Init(&huart4) != HAL_OK)
@@ -77,6 +77,7 @@ void MX_UART4_Init(void)
   /* USER CODE BEGIN UART4_Init 2 */
 
   /* USER CODE END UART4_Init 2 */
+
 }
 /* UART7 init function */
 void MX_UART7_Init(void)
@@ -99,7 +100,7 @@ void MX_UART7_Init(void)
   huart7.Init.OverSampling = UART_OVERSAMPLING_16;
   huart7.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
   huart7.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  huart7.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_TXINVERT_INIT | UART_ADVFEATURE_RXINVERT_INIT;
+  huart7.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_TXINVERT_INIT|UART_ADVFEATURE_RXINVERT_INIT;
   huart7.AdvancedInit.TxPinLevelInvert = UART_ADVFEATURE_TXINV_ENABLE;
   huart7.AdvancedInit.RxPinLevelInvert = UART_ADVFEATURE_RXINV_ENABLE;
   if (HAL_UART_Init(&huart7) != HAL_OK)
@@ -121,6 +122,7 @@ void MX_UART7_Init(void)
   /* USER CODE BEGIN UART7_Init 2 */
 
   /* USER CODE END UART7_Init 2 */
+
 }
 /* UART8 init function */
 void MX_UART8_Init(void)
@@ -163,21 +165,22 @@ void MX_UART8_Init(void)
   /* USER CODE BEGIN UART8_Init 2 */
 
   /* USER CODE END UART8_Init 2 */
+
 }
 
-void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)
+void HAL_UART_MspInit(UART_HandleTypeDef* uartHandle)
 {
 
   GPIO_InitTypeDef GPIO_InitStruct = {0};
   RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
-  if (uartHandle->Instance == UART4)
+  if(uartHandle->Instance==UART4)
   {
-    /* USER CODE BEGIN UART4_MspInit 0 */
+  /* USER CODE BEGIN UART4_MspInit 0 */
 
-    /* USER CODE END UART4_MspInit 0 */
+  /* USER CODE END UART4_MspInit 0 */
 
-    /** Initializes the peripherals clock
-     */
+  /** Initializes the peripherals clock
+  */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_UART4;
     PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
@@ -193,7 +196,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)
     PA0     ------> UART4_TX
     PA1     ------> UART4_RX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1;
+    GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_PULLDOWN;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -217,7 +220,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)
       Error_Handler();
     }
 
-    __HAL_LINKDMA(uartHandle, hdmarx, hdma_uart4_rx);
+    __HAL_LINKDMA(uartHandle,hdmarx,hdma_uart4_rx);
 
     /* UART4_TX Init */
     hdma_uart4_tx.Instance = DMA1_Stream1;
@@ -235,23 +238,23 @@ void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)
       Error_Handler();
     }
 
-    __HAL_LINKDMA(uartHandle, hdmatx, hdma_uart4_tx);
+    __HAL_LINKDMA(uartHandle,hdmatx,hdma_uart4_tx);
 
     /* UART4 interrupt Init */
     HAL_NVIC_SetPriority(UART4_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(UART4_IRQn);
-    /* USER CODE BEGIN UART4_MspInit 1 */
+  /* USER CODE BEGIN UART4_MspInit 1 */
 
-    /* USER CODE END UART4_MspInit 1 */
+  /* USER CODE END UART4_MspInit 1 */
   }
-  else if (uartHandle->Instance == UART7)
+  else if(uartHandle->Instance==UART7)
   {
-    /* USER CODE BEGIN UART7_MspInit 0 */
+  /* USER CODE BEGIN UART7_MspInit 0 */
 
-    /* USER CODE END UART7_MspInit 0 */
+  /* USER CODE END UART7_MspInit 0 */
 
-    /** Initializes the peripherals clock
-     */
+  /** Initializes the peripherals clock
+  */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_UART7;
     PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
@@ -267,7 +270,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)
     PF6     ------> UART7_RX
     PF7     ------> UART7_TX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7;
+    GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_PULLDOWN;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -291,7 +294,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)
       Error_Handler();
     }
 
-    __HAL_LINKDMA(uartHandle, hdmarx, hdma_uart7_rx);
+    __HAL_LINKDMA(uartHandle,hdmarx,hdma_uart7_rx);
 
     /* UART7_TX Init */
     hdma_uart7_tx.Instance = DMA1_Stream3;
@@ -309,23 +312,23 @@ void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)
       Error_Handler();
     }
 
-    __HAL_LINKDMA(uartHandle, hdmatx, hdma_uart7_tx);
+    __HAL_LINKDMA(uartHandle,hdmatx,hdma_uart7_tx);
 
     /* UART7 interrupt Init */
     HAL_NVIC_SetPriority(UART7_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(UART7_IRQn);
-    /* USER CODE BEGIN UART7_MspInit 1 */
+  /* USER CODE BEGIN UART7_MspInit 1 */
 
-    /* USER CODE END UART7_MspInit 1 */
+  /* USER CODE END UART7_MspInit 1 */
   }
-  else if (uartHandle->Instance == UART8)
+  else if(uartHandle->Instance==UART8)
   {
-    /* USER CODE BEGIN UART8_MspInit 0 */
+  /* USER CODE BEGIN UART8_MspInit 0 */
 
-    /* USER CODE END UART8_MspInit 0 */
+  /* USER CODE END UART8_MspInit 0 */
 
-    /** Initializes the peripherals clock
-     */
+  /** Initializes the peripherals clock
+  */
     PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_UART8;
     PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
     if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
@@ -341,7 +344,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)
     PE0     ------> UART8_RX
     PE1     ------> UART8_TX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_0 | GPIO_PIN_1;
+    GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -365,7 +368,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)
       Error_Handler();
     }
 
-    __HAL_LINKDMA(uartHandle, hdmarx, hdma_uart8_rx);
+    __HAL_LINKDMA(uartHandle,hdmarx,hdma_uart8_rx);
 
     /* UART8_TX Init */
     hdma_uart8_tx.Instance = DMA1_Stream5;
@@ -383,25 +386,25 @@ void HAL_UART_MspInit(UART_HandleTypeDef *uartHandle)
       Error_Handler();
     }
 
-    __HAL_LINKDMA(uartHandle, hdmatx, hdma_uart8_tx);
+    __HAL_LINKDMA(uartHandle,hdmatx,hdma_uart8_tx);
 
     /* UART8 interrupt Init */
     HAL_NVIC_SetPriority(UART8_IRQn, 5, 0);
     HAL_NVIC_EnableIRQ(UART8_IRQn);
-    /* USER CODE BEGIN UART8_MspInit 1 */
+  /* USER CODE BEGIN UART8_MspInit 1 */
 
-    /* USER CODE END UART8_MspInit 1 */
+  /* USER CODE END UART8_MspInit 1 */
   }
 }
 
-void HAL_UART_MspDeInit(UART_HandleTypeDef *uartHandle)
+void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 {
 
-  if (uartHandle->Instance == UART4)
+  if(uartHandle->Instance==UART4)
   {
-    /* USER CODE BEGIN UART4_MspDeInit 0 */
+  /* USER CODE BEGIN UART4_MspDeInit 0 */
 
-    /* USER CODE END UART4_MspDeInit 0 */
+  /* USER CODE END UART4_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_UART4_CLK_DISABLE();
 
@@ -409,7 +412,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef *uartHandle)
     PA0     ------> UART4_TX
     PA1     ------> UART4_RX
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_0 | GPIO_PIN_1);
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_0|GPIO_PIN_1);
 
     /* UART4 DMA DeInit */
     HAL_DMA_DeInit(uartHandle->hdmarx);
@@ -417,15 +420,15 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef *uartHandle)
 
     /* UART4 interrupt Deinit */
     HAL_NVIC_DisableIRQ(UART4_IRQn);
-    /* USER CODE BEGIN UART4_MspDeInit 1 */
+  /* USER CODE BEGIN UART4_MspDeInit 1 */
 
-    /* USER CODE END UART4_MspDeInit 1 */
+  /* USER CODE END UART4_MspDeInit 1 */
   }
-  else if (uartHandle->Instance == UART7)
+  else if(uartHandle->Instance==UART7)
   {
-    /* USER CODE BEGIN UART7_MspDeInit 0 */
+  /* USER CODE BEGIN UART7_MspDeInit 0 */
 
-    /* USER CODE END UART7_MspDeInit 0 */
+  /* USER CODE END UART7_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_UART7_CLK_DISABLE();
 
@@ -433,7 +436,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef *uartHandle)
     PF6     ------> UART7_RX
     PF7     ------> UART7_TX
     */
-    HAL_GPIO_DeInit(GPIOF, GPIO_PIN_6 | GPIO_PIN_7);
+    HAL_GPIO_DeInit(GPIOF, GPIO_PIN_6|GPIO_PIN_7);
 
     /* UART7 DMA DeInit */
     HAL_DMA_DeInit(uartHandle->hdmarx);
@@ -441,15 +444,15 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef *uartHandle)
 
     /* UART7 interrupt Deinit */
     HAL_NVIC_DisableIRQ(UART7_IRQn);
-    /* USER CODE BEGIN UART7_MspDeInit 1 */
+  /* USER CODE BEGIN UART7_MspDeInit 1 */
 
-    /* USER CODE END UART7_MspDeInit 1 */
+  /* USER CODE END UART7_MspDeInit 1 */
   }
-  else if (uartHandle->Instance == UART8)
+  else if(uartHandle->Instance==UART8)
   {
-    /* USER CODE BEGIN UART8_MspDeInit 0 */
+  /* USER CODE BEGIN UART8_MspDeInit 0 */
 
-    /* USER CODE END UART8_MspDeInit 0 */
+  /* USER CODE END UART8_MspDeInit 0 */
     /* Peripheral clock disable */
     __HAL_RCC_UART8_CLK_DISABLE();
 
@@ -457,7 +460,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef *uartHandle)
     PE0     ------> UART8_RX
     PE1     ------> UART8_TX
     */
-    HAL_GPIO_DeInit(GPIOE, GPIO_PIN_0 | GPIO_PIN_1);
+    HAL_GPIO_DeInit(GPIOE, GPIO_PIN_0|GPIO_PIN_1);
 
     /* UART8 DMA DeInit */
     HAL_DMA_DeInit(uartHandle->hdmarx);
@@ -465,9 +468,9 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef *uartHandle)
 
     /* UART8 interrupt Deinit */
     HAL_NVIC_DisableIRQ(UART8_IRQn);
-    /* USER CODE BEGIN UART8_MspDeInit 1 */
+  /* USER CODE BEGIN UART8_MspDeInit 1 */
 
-    /* USER CODE END UART8_MspDeInit 1 */
+  /* USER CODE END UART8_MspDeInit 1 */
   }
 }
 
