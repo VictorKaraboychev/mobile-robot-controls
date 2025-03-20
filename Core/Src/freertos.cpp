@@ -110,6 +110,20 @@ const osThreadAttr_t commTask_attributes = {
     .stack_size = 512 * 4,
     .priority = (osPriority_t)osPriorityNormal,
 };
+/* Definitions for leftMotorTask */
+osThreadId_t leftMotorTaskHandle;
+const osThreadAttr_t leftMotorTask_attributes = {
+    .name = "leftMotorTask",
+    .stack_size = 256 * 4,
+    .priority = (osPriority_t)osPriorityNormal,
+};
+/* Definitions for rightMotorTask */
+osThreadId_t rightMotorTaskHandle;
+const osThreadAttr_t rightMotorTask_attributes = {
+    .name = "rightMotorTask",
+    .stack_size = 256 * 4,
+    .priority = (osPriority_t)osPriorityLow,
+};
 /* Definitions for spi1Mutex */
 osMutexId_t spi1MutexHandle;
 const osMutexAttr_t spi1Mutex_attributes = {
@@ -153,6 +167,8 @@ extern void StartBarometerTask(void *argument);
 extern void StartIMUTask(void *argument);
 extern void StartMagTask(void *argument);
 extern void StartCommTask(void *argument);
+extern void StartLeftMotorTask(void *argument);
+extern void StartRightMotorTask(void *argument);
 
 extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
@@ -244,6 +260,12 @@ void MX_FREERTOS_Init(void)
 
   /* creation of commTask */
   commTaskHandle = osThreadNew(StartCommTask, NULL, &commTask_attributes);
+
+  /* creation of leftMotorTask */
+  leftMotorTaskHandle = osThreadNew(StartLeftMotorTask, NULL, &leftMotorTask_attributes);
+
+  /* creation of rightMotorTask */
+  rightMotorTaskHandle = osThreadNew(StartRightMotorTask, NULL, &rightMotorTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

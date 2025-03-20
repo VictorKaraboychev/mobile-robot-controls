@@ -53,7 +53,7 @@ public:
 
 	// Set the motor speed (rads/s) -40 to 40 rads/s
 	// Set the motor acceleration (rads/s^2) 0 to 100 rads/s^2
-	void setVelocity(float speed, float acceleration = -1, bool brake = false);
+	void setVelocity(float velocity, float acceleration = -1, bool brake = false);
 	// Get the motor speed (rads/s)
 	float getVelocity() const;
 
@@ -84,26 +84,18 @@ private:
 	UART_HandleTypeDef *huart;
 	osMutexId_t *muart;
 
-	uint8_t tx[10];
-	uint8_t rx[10];
-
 	uint8_t id;
 	DDSM400_MODE mode;
 	DDSM400_FAULT status;
 	float temperature;
 	float current;
-	float speed;
+	float velocity;
 	float position;
 	float acceleration;
 
 	float default_acceleration = DDSM400_DEFAULT_ACCELERATION;
 
-	HAL_StatusTypeDef DDSM400_Message(uint8_t *tx);
-
-	void parseRX();
-
-	static void RXCpltCallback();
-	static void TXCpltCallback();
+	HAL_StatusTypeDef DDSM400_Message(uint8_t *tx, uint8_t *rx = NULL);
 };
 
 #endif /* __DDSM400_H__ */

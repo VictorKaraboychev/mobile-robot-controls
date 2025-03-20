@@ -36,38 +36,53 @@ uint8_t crc8(uint8_t const *data, size_t data_size, uint8_t poly, uint8_t init, 
 	return (refout ? uint8_reverse(crc) : crc) ^ xor_out;
 }
 
-HAL_StatusTypeDef DDSM400::DDSM400_Message(uint8_t *tx)
+HAL_StatusTypeDef DDSM400::DDSM400_Message(uint8_t *tx, uint8_t *rx)
 {
 	HAL_StatusTypeDef status = HAL_OK;
 
-	this->tx[0] = this->id;
+	uint8_t _tx[10] = {this->id, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t _rx[10] = {0};
 
-	// Copy the data into the frame
+	// Copy the data into the tx frame
 	for (uint8_t i = 0; i < 8; i++)
 	{
-		this->tx[i + 1] = tx[i];
+		_tx[i + 1] = tx[i];
 	}
 
 	// Calculate the CRC
-	this->tx[9] = crc8(this->tx, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00);
+	_tx[9] = crc8(_tx, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00);
 
-	status = UART_Write(this->huart, this->muart, this->tx, 10, 5);
+	uint8_t retries = 5;
 
-	status = UART_Read(this->huart, this->muart, this->rx, 10, 5);
+	// Send the message
+	do
+	{
+		status = UART_Write(this->huart, this->muart, _tx, 10, 5);
+
+		status = UART_Read(this->huart, this->muart, _rx, 10, 5);
+	}
+	while (status != HAL_OK && retries--);
 
 	// Check the status
 	if (status != HAL_OK)
 	{
+		printf("Communication Error ID: %d\n", this->id);
 		return status;
 	}
 
 	// Confirm the CRC
-	uint8_t crc = crc8(this->rx, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00);
+	uint8_t crc = crc8(_rx, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00);
 
-	if (crc != this->rx[9])
+	if (crc != _rx[9])
 	{
 		printf("CRC Error\n");
 		return HAL_ERROR;
+	}
+
+	// Copy the data from the rx frame
+	for (uint8_t i = 0; i < 8; i++)
+	{
+		rx[i] = _rx[i + 1];
 	}
 
 	return status;
@@ -128,7 +143,7 @@ void DDSM400::disable()
 	this->setMode(DDSM400_MODE::DISABLED);
 }
 
-void DDSM400::setVelocity(float speed, float acceleration, bool brake)
+void DDSM400::setVelocity(float velocity, float acceleration, bool brake)
 {
 	if (this->mode != DDSM400_MODE::SPEED)
 	{
@@ -136,18 +151,19 @@ void DDSM400::setVelocity(float speed, float acceleration, bool brake)
 	}
 
 	uint8_t tx[8] = {0x64, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t rx[8] = {0};
 
 	if (acceleration < 0)
 	{
 		acceleration = this->default_acceleration;
 	}
 
-	int16_t speed_int = speed * (300 / M_PI);					  // rpm
+	int16_t velocity_int = velocity * (300 / M_PI);				  // rpm
 	uint8_t acceleration_int = (100 * M_PI) / (3 * acceleration); // ms/rpm
 
-	// Speed
-	tx[2] = speed_int & 0xFF;		 // LSB
-	tx[1] = (speed_int >> 8) & 0xFF; // MSB
+	// Velocity
+	tx[2] = velocity_int & 0xFF;		// LSB
+	tx[1] = (velocity_int >> 8) & 0xFF; // MSB
 
 	// Acceleration
 	tx[5] = acceleration_int;
@@ -155,14 +171,32 @@ void DDSM400::setVelocity(float speed, float acceleration, bool brake)
 	// Brake
 	tx[6] = brake ? 0xFF : 0x00;
 
-	HAL_StatusTypeDef status = DDSM400_Message(tx);
+	HAL_StatusTypeDef status = DDSM400_Message(tx, rx);
 
-	this->parseRX();
+	// Velocity
+	int16_t speed_rx = (rx[1] << 8) | rx[2];
+	this->velocity = (float)(speed_rx * (M_PI / 300));
+
+	// Acceleration
+	uint8_t acceleration_int_rx = rx[5];
+	this->acceleration = (float)((100 * M_PI) / (3 * acceleration_int_rx));
+
+	// Current
+	uint16_t current_rx = (rx[3] << 8) | rx[4];
+	this->current = (float)(current_rx / INT16_MAX);
+
+	// Temperature
+	uint8_t temperature_rx = rx[6];
+	this->temperature = (float)temperature_rx;
+
+	// Fault
+	uint8_t fault_rx = rx[7];
+	this->status = (DDSM400_FAULT)fault_rx;
 }
 
 float DDSM400::getVelocity() const
 {
-	return this->speed;
+	return this->velocity;
 }
 
 void DDSM400::setPosition(float position)
@@ -173,6 +207,7 @@ void DDSM400::setPosition(float position)
 	}
 
 	uint8_t tx[8] = {0x64, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t rx[8] = {0};
 
 	uint16_t position_int = position * (INT16_MAX / M_TWOPI);
 
@@ -180,18 +215,47 @@ void DDSM400::setPosition(float position)
 	tx[2] = position_int & 0xFF;		// LSB
 	tx[1] = (position_int >> 8) & 0xFF; // MSB
 
-	HAL_StatusTypeDef status = DDSM400_Message(tx);
+	HAL_StatusTypeDef status = DDSM400_Message(tx, rx);
 
-	this->parseRX();
+	// Velocity
+	int16_t speed_rx = (rx[1] << 8) | rx[2];
+	this->velocity = (float)(speed_rx * (M_PI / 300));
+
+	// Acceleration
+	uint8_t acceleration_int_rx = rx[5];
+	this->acceleration = (float)((100 * M_PI) / (3 * acceleration_int_rx));
+
+	// Current
+	uint16_t current_rx = (rx[3] << 8) | rx[4];
+	this->current = (float)(current_rx / INT16_MAX);
+
+	// Temperature
+	uint8_t temperature_rx = rx[6];
+	this->temperature = (float)temperature_rx;
+
+	// Fault
+	uint8_t fault_rx = rx[7];
+	this->status = (DDSM400_FAULT)fault_rx;
 }
 
 float DDSM400::getPosition()
 {
 	uint8_t tx[8] = {0x74, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t rx[8] = {0};
 
-	HAL_StatusTypeDef status = DDSM400_Message(tx);
+	HAL_StatusTypeDef status = DDSM400_Message(tx, rx);
 
-	this->parseRX();
+	// Odometer
+	int32_t odometer_rx = (rx[1] << 24) | (rx[2] << 16) | (rx[3] << 8) | rx[4];
+
+	// Position
+	uint32_t position_rx = (rx[5] << 8) | rx[6];
+
+	this->position = fmodf((float)position_rx * (M_TWOPI / INT16_MAX) + DDSM400_POSITION_OFFSET, M_TWOPI) + (float)(odometer_rx * M_TWOPI) - DDSM400_POSITION_OFFSET;
+
+	// Fault
+	uint8_t fault_rx = rx[7];
+	this->status = (DDSM400_FAULT)fault_rx;
 
 	return this->position;
 }
@@ -204,6 +268,7 @@ void DDSM400::setCurrent(float current)
 	}
 
 	uint8_t tx[8] = {0x64, 0, 0, 0, 0, 0, 0, 0};
+	uint8_t rx[8] = {0};
 
 	int16_t current_int = current * INT16_MAX;
 
@@ -211,9 +276,27 @@ void DDSM400::setCurrent(float current)
 	tx[2] = current_int & 0xFF;		   // LSB
 	tx[1] = (current_int >> 8) & 0xFF; // MSB
 
-	HAL_StatusTypeDef status = DDSM400_Message(tx);
+	HAL_StatusTypeDef status = DDSM400_Message(tx, rx);
 
-	this->parseRX();
+	// Velocity
+	int16_t speed_rx = (rx[1] << 8) | rx[2];
+	this->velocity = (float)(speed_rx * (M_PI / 300));
+
+	// Acceleration
+	uint8_t acceleration_int_rx = rx[5];
+	this->acceleration = (float)((100 * M_PI) / (3 * acceleration_int_rx));
+
+	// Current
+	uint16_t current_rx = (rx[3] << 8) | rx[4];
+	this->current = (float)(current_rx / INT16_MAX);
+
+	// Temperature
+	uint8_t temperature_rx = rx[6];
+	this->temperature = (float)temperature_rx;
+
+	// Fault
+	uint8_t fault_rx = rx[7];
+	this->status = (DDSM400_FAULT)fault_rx;
 }
 
 float DDSM400::getCurrent() const
@@ -234,54 +317,4 @@ uint8_t DDSM400::getTemperature() const
 DDSM400_FAULT DDSM400::getStatus()
 {
 	return this->status;
-}
-
-void DDSM400::parseRX()
-{
-	if (this->rx[0] != this->id)
-	{
-		return;
-	}
-
-	switch (this->rx[1])
-	{
-	case 0x65:
-	{
-		// Speed
-		int16_t speed_rx = (this->rx[1] << 8) | this->rx[2];
-		this->speed = (float)(speed_rx * (M_PI / 300));
-
-		// Acceleration
-		uint8_t acceleration_int_rx = this->rx[5];
-		this->acceleration = (float)((100 * M_PI) / (3 * acceleration_int_rx));
-
-		// Current
-		uint16_t current_rx = (this->rx[3] << 8) | this->rx[4];
-		this->current = (float)(current_rx / INT16_MAX);
-
-		// Temperature
-		uint8_t temperature_rx = this->rx[6];
-		this->temperature = (float)temperature_rx;
-
-		// Fault
-		uint8_t fault_rx = this->rx[7];
-		this->status = (DDSM400_FAULT)fault_rx;
-	}
-	break;
-	case 0x75:
-	{
-		// Odometer
-		int32_t odometer_rx = (this->rx[1] << 24) | (this->rx[2] << 16) | (this->rx[3] << 8) | this->rx[4];
-
-		// Position
-		uint32_t position_rx = (this->rx[5] << 8) | this->rx[6];
-
-		this->position = fmodf((float)position_rx * (M_TWOPI / INT16_MAX) + DDSM400_POSITION_OFFSET, M_TWOPI) + (float)(odometer_rx * M_TWOPI) - DDSM400_POSITION_OFFSET;
-
-		// Fault
-		uint8_t fault_rx = this->rx[7];
-		this->status = (DDSM400_FAULT)fault_rx;
-	}
-	break;
-	}
 }

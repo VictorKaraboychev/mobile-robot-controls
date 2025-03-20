@@ -56,4 +56,7 @@ void StartFusionTask(void *argument);
 void StartControlTask(void *argument);
 void StartCommTask(void *argument);
 
+void StartLeftMotorTask(void *argument);
+void StartRightMotorTask(void *argument);
+
 #endif /* __CONTROL_H__ */

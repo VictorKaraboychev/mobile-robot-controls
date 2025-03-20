@@ -177,7 +177,7 @@ DDSM400 motor4(&huart7, &uart7MutexHandle); // Rear right
 volatile float left_speed = 0;
 volatile float right_speed = 0;
 
-void LeftMotorTask(void *argument)
+void StartLeftMotorTask(void *argument)
 {
 	// Motor Initialization
 	motor1.init(0x01);
@@ -208,11 +208,13 @@ void LeftMotorTask(void *argument)
 		float left_encoder_position = motor1.getPosition() * WHEEL_RADIUS;
 		float left_encoder_speed = motor1.getVelocity() * WHEEL_RADIUS;
 
+		// printf("Left: %.2f, %.4f\n", left_encoder_position, left_encoder_speed);
+
 		osDelayUntil(last_time + 25); // 40 Hz
 	}
 }
 
-void RightMotorTask(void *argument)
+void StartRightMotorTask(void *argument)
 {
 	// Motor Initialization
 	motor2.init(0x02);
@@ -243,64 +245,62 @@ void RightMotorTask(void *argument)
 		float right_encoder_position = motor2.getPosition() * WHEEL_RADIUS;
 		float right_encoder_speed = motor2.getVelocity() * WHEEL_RADIUS;
 
+		printf("Right: %.2f, %.4f\n", right_encoder_position, right_encoder_speed);
+
 		osDelayUntil(last_time + 25); // 40 Hz
 	}
 }
 
 void StartControlTask(void *argument)
 {
-	// Motor Tasks
-	xTaskCreate(LeftMotorTask, "LeftMotorTask", 256, NULL, 2, NULL);
-	xTaskCreate(RightMotorTask, "RightMotorTask", 256, NULL, 2, NULL);
-
 	// Gyro calibration takes 5 seconds, wait for it to finish
 	osDelay(6000);
 
 	// Servo Initialization
-	servo1.init(45);
+	// servo1.init(45);
 
-	left_speed = 0.25f;
-	right_speed = 0.25f;
+	// left_speed = 0.25f;
+	// right_speed = 0.25f;
 
-	osDelay(1000);
+	// osDelay(1000);
 
-	left_speed = 0;
-	right_speed = 0;
+	// left_speed = 0;
+	// right_speed = 0;
 
-	servo1.setAngle(228, 40.0f);
+	// servo1.setAngle(228, 40.0f);
 
-	osDelay(500);
+	// osDelay(500);
 
-	servo1.setAngle(45, 40.0f);
+	// servo1.setAngle(45, 40.0f);
 
-	left_speed = 0.25f;
-	right_speed = 0.25f;
+	// left_speed = 0.25f;
+	// right_speed = 0.25f;
 
-	osDelay(1000);
+	// osDelay(1000);
 
-	left_speed = 0;
-	right_speed = 0;
+	// left_speed = 0;
+	// right_speed = 0;
 
-	servo1.setAngle(230, 40.0f);
+	// servo1.setAngle(230, 40.0f);
 
-	osDelay(500);
+	// osDelay(500);
 
-	servo1.setAngle(220, 40.0f);
+	// servo1.setAngle(220, 40.0f);
 
-	left_speed = -0.05f;
-	right_speed = -0.05f;
+	// left_speed = -0.05f;
+	// right_speed = -0.05f;
 
-	osDelay(5000);
+	// osDelay(5000);
 
-	left_speed = -0.25f;
-	right_speed = -0.25f;
+	// left_speed = -0.25f;
+	// right_speed = -0.25f;
 
-	osDelay(1000);
+	// osDelay(1000);
 
-	left_speed = 0;
-	right_speed = 0;
+	// left_speed = 0;
+	// right_speed = 0;
 
-	servo1.setAngle(45, 40.0f);
+	// servo1.setAngle(45, 40.0f);
 
 	// // Drive forward for 1 second
 	// left_speed = 0.25f;
@@ -367,12 +367,12 @@ void StartControlTask(void *argument)
 		// 	right_velocity *= MAX_SPEED / max_velocity;
 		// }
 
-		// float time = (osKernelGetTickCount() / 1000.0f) - initial_time;
+		float time = (osKernelGetTickCount() / 1000.0f) - initial_time;
 
-		// float speed = 0.5f * sinf(0.2 * M_PI * time);
+		float speed = 0.5f * sinf(0.2 * M_PI * time);
 
-		// left_speed = speed;
-		// right_speed = speed;
+		left_speed = speed;
+		right_speed = speed;
 
 		// float speed = turnPID.update(M_PI_2, robot.orientation[0], delta_time);
 
@@ -440,8 +440,6 @@ void StartCommTask(void *argument)
 	{
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
-
-		printf("Hello, world!\n");
 
 		osDelayUntil(last_time + 1000); // 1 Hz
 	}
