@@ -40,6 +40,7 @@ struct Sensor
 #include "ddsm400.h"
 #include "servo.h"
 #include "pid.h"
+#include "pwm.h"
 
 struct RobotState
 {

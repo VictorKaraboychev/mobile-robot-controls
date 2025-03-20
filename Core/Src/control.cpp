@@ -168,6 +168,7 @@ void StartFusionTask(void *argument)
 PID turnPID(0.5f, 0.01f, 0.0f, -0.2f, 0.2f, -0.2f, 0.2f);
 
 Servo servo1(&htim12, TIM_CHANNEL_2, 270, 0);
+PWM relay(&htim12, TIM_CHANNEL_1);
 
 extern osMutexId_t uart4MutexHandle;
 extern osMutexId_t uart7MutexHandle;
@@ -264,7 +265,10 @@ void StartControlTask(void *argument)
 	osDelay(6000);
 
 	// Servo Initialization
-	// servo1.init(45);
+	servo1.init(50);
+
+	// Relay Initialization
+	relay.init();
 
 	float initial_time = osKernelGetTickCount() / 1000.0f;
 	uint32_t last_time = osKernelGetTickCount();
@@ -294,17 +298,25 @@ void StartControlTask(void *argument)
 		// 	right_velocity *= MAX_SPEED / max_velocity;
 		// }
 
-		float time = (osKernelGetTickCount() / 1000.0f) - initial_time;
+		// float time = (osKernelGetTickCount() / 1000.0f) - initial_time;
 
-		float speed = 0.5f * sinf(0.2 * M_PI * time);
+		// float speed = 0.5f * sinf(0.2 * M_PI * time);
 
-		left_speed = speed;
-		right_speed = speed;
+		// left_speed = speed;
+		// right_speed = speed;
 
 		// float speed = turnPID.update(M_PI_2, robot.orientation[0], delta_time);
 
 		// left_speed = speed;
 		// right_speed = -speed;
+
+		// servo1.setAngle(220, 60);
+		// relay.on();
+
+		// osDelay(750);
+
+		// relay.off();
+		// servo1.setAngle(45, 60);
 
 		// CSV print
 		// printf("%.2f, %.4f, %.4f\n", time, left_position, left_speed);
