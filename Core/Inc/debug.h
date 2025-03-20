@@ -8,22 +8,14 @@
 
 #include "control.h"
 
+#include "pwm.h"
+
 #include "barometer.h"
 #include "encoders.h"
 #include "imu.h"
 #include "magnetometer.h"
 
 #include <stdio.h>
-
-#define GREEN_LED1 &htim4.Instance->CCR3
-#define GREEN_LED3 &htim4.Instance->CCR1
-#define GREEN_LED2 &htim4.Instance->CCR2
-
-#define RED_LED1 &htim8.Instance->CCR2
-#define RED_LED3 &htim4.Instance->CCR4
-#define RED_LED2 &htim8.Instance->CCR1
-
-#define BUZZER &htim15.Instance->CCR1
 
 #define SLOW_BLINK blink({500, 500}, 1000)
 #define FAST_BLINK blink({100, 100}, 200)

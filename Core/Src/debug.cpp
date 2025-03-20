@@ -22,30 +22,48 @@ bool blink(std::initializer_list<uint16_t> periods, uint32_t duration)
 	return state;
 }
 
-void setPWM(volatile uint32_t *handle, float brightness, bool pattern = true, uint16_t resolution = 1000)
-{
-	*handle = (uint32_t)(pattern * brightness * resolution);
-}
+PWM green_led1(&htim4, TIM_CHANNEL_3);
+PWM green_led2(&htim4, TIM_CHANNEL_2);
+PWM green_led3(&htim4, TIM_CHANNEL_1);
+
+PWM red_led1(&htim8, TIM_CHANNEL_2);
+PWM red_led2(&htim8, TIM_CHANNEL_1);
+PWM red_led3(&htim4, TIM_CHANNEL_4);
+
+PWM buzzer(&htim15, TIM_CHANNEL_1);
 
 void StartDebugTask(void *argument)
 {
 	// GREEN LEDs
-	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_2);
-	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3);
+	green_led1.init();
+	green_led2.init();
+	green_led3.init();
 
 	// RED LEDs
-	HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4);
-	HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_1);
-	HAL_TIM_PWM_Start(&htim8, TIM_CHANNEL_2);
+	red_led1.init();
+	red_led2.init();
+	red_led3.init();
 
 	// BUZZER
-	HAL_TIM_PWM_Start(&htim15, TIM_CHANNEL_1);
+	buzzer.init();
 
 	bool all_sensors_active = false;
 
 	uint32_t last_time = osKernelGetTickCount();
 
+	// Startup loop
+	while (osKernelGetTickCount() < 1000)
+	{
+		buzzer.set(MEDIUM_POWER * blink({500, 200, 100, 100, 100}, 1000));
+
+		osDelay(10); // 100 Hz
+	}
+
+	buzzer.set(OFF_POWER);
+
+	osDelay(1000);
+
+	// Main loop
 	while (true)
 	{
 		float elapsed_time = (osKernelGetTickCount() - last_time) / 1000.0f;
@@ -71,48 +89,48 @@ void StartDebugTask(void *argument)
 		}
 
 		// Reset the LEDs and buzzer
-		setPWM(GREEN_LED1, OFF_POWER);
-		setPWM(GREEN_LED2, OFF_POWER);
-		setPWM(GREEN_LED3, OFF_POWER);
+		green_led1.set(OFF_POWER);
+		green_led2.set(OFF_POWER);
+		green_led3.set(OFF_POWER);
 
-		setPWM(RED_LED1, OFF_POWER);
-		setPWM(RED_LED2, OFF_POWER);
-		setPWM(RED_LED3, OFF_POWER);
+		red_led1.set(OFF_POWER);
+		red_led2.set(OFF_POWER);
+		red_led3.set(OFF_POWER);
 
-		setPWM(BUZZER, OFF_POWER);
+		buzzer.set(OFF_POWER);
 
 		// Check if all sensors are active
 		all_sensors_active = accelerometer_data.active && magnetometer_data.active && barometer_data.active && encoders_data.active;
 
 		if (all_sensors_active)
 		{
-			setPWM(GREEN_LED1, MEDIUM_POWER, SLOW_BLINK);
+			green_led1.set(MEDIUM_POWER * SLOW_BLINK);
 		}
 		else
 		{
 			if (!accelerometer_data.active) // If the IMU is not active
 			{
-				setPWM(RED_LED1, MEDIUM_POWER, BLINK_1);
+				red_led1.set(MEDIUM_POWER * BLINK_1);
 			}
 			else if (!magnetometer_data.active) // If the magnetometer is not active
 			{
-				setPWM(RED_LED1, MEDIUM_POWER, BLINK_2);
+				red_led1.set(MEDIUM_POWER * BLINK_2);
 			}
 			else if (!barometer_data.active) // If the barometer is not active
 			{
-				setPWM(RED_LED1, MEDIUM_POWER, BLINK_3);
+				red_led1.set(MEDIUM_POWER * BLINK_3);
 			}
 			else if (!encoders_data.active) // If the encoders are not active
 			{
-				setPWM(RED_LED1, MEDIUM_POWER, BLINK_4);
+				red_led1.set(MEDIUM_POWER * BLINK_4);
 			}
 		}
 
 		// If the magnetometer is calibrating beep the buzzer
 		if (accelerometer_data.is_calibrating || magnetometer_data.is_calibrating)
 		{
-			setPWM(BUZZER, LOW_POWER, FAST_BLINK);
-			setPWM(GREEN_LED2, MEDIUM_POWER, FAST_BLINK);
+			buzzer.set(LOW_POWER * FAST_BLINK);
+			green_led2.set(MEDIUM_POWER * FAST_BLINK);
 		}
 
 		osDelay(10); // 100 Hz
