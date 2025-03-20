@@ -29,6 +29,7 @@ struct Sensor
 
 	EKF::MeasurementFunc z;
 	std::function<bool()> ready;
+	std::function<void()> consume;
 };
 
 #include "barometer.h"

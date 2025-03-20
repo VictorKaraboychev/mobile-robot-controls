@@ -16,8 +16,11 @@
 
 struct Encoder
 {
-	uint64_t pulses;
-	uint64_t last_pulses;
+	float position; // s (m)
+	float velocity; // v (m/s)
+
+	bool data_ready;
+	bool active;
 };
 
 struct EncodersData

@@ -86,7 +86,7 @@ void StartIMUTask(void *argument)
 		acc_bias += Eigen::Vector3f{(float)acc.x, (float)acc.y, -(float)acc.z};
 		gyro_bias += Eigen::Vector3f{-(float)gyro.x, -(float)gyro.y, (float)gyro.z};
 
-		osDelay(5);
+		osDelay(4); // 250 Hz
 	}
 
 	acc_bias *= (acc_scale / (float)samples);
@@ -137,7 +137,7 @@ void StartIMUTask(void *argument)
 		gyroscope_data.active = true;
 		gyroscope_data.data_ready = true;
 
-		osDelay(1); // 1000 Hz
+		osDelay(4); // 250 Hz
 	}
 }
 
@@ -231,12 +231,18 @@ bool accelerometerDataReady()
 	return accelerometer_data.data_ready;
 }
 
+void accelerometerDataConsume()
+{
+	accelerometer_data.data_ready = false;
+}
+
 Sensor accelerometer = {
 	.h = h_accelerometer,
 	.H = H_accelerometer,
 	.R = R_accelerometer,
 	.z = accelerometerMeasurement,
-	.ready = accelerometerDataReady};
+	.ready = accelerometerDataReady,
+	.consume = accelerometerDataConsume};
 
 // Measurement function
 EKF::MeasurementVector h_gyroscope(const EKF::StateVector &x)
@@ -283,7 +289,7 @@ EKF::MeasurementVector gyroscopeMeasurement(const EKF::StateVector &x)
 	float q = angular_velocity[1];
 	float r = angular_velocity[2];
 
-	Eigen::Vector3f world_angular_velocity {
+	Eigen::Vector3f world_angular_velocity{
 		p + (q * s1 + r * c1) * t2, // φ' = p + (q * s1 + r * c1) * t2
 		q * c1 - r * s1,			// θ' = q * c1 - r * s1
 		(q * s1 + r * c1) / c2		// ψ' = (q * s1 + r * c1) / c2
@@ -302,9 +308,15 @@ bool gyroscopeDataReady()
 	return gyroscope_data.data_ready;
 }
 
+void gyroscopeDataConsume()
+{
+	gyroscope_data.data_ready = false;
+}
+
 Sensor gyroscope = {
 	.h = h_gyroscope,
 	.H = H_gyroscope,
 	.R = R_gyroscope,
 	.z = gyroscopeMeasurement,
-	.ready = gyroscopeDataReady};
+	.ready = gyroscopeDataReady,
+	.consume = gyroscopeDataConsume};

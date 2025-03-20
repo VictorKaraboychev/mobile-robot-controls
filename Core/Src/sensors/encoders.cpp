@@ -19,45 +19,32 @@ void StartEncodersTask(void *argument)
 		last_time = HAL_GetTick();
 
 		// Read the encoder data
-		// status = (Read_Encoders(&left->pulses, &right->pulses) == HAL_OK); // TODO: Implement the Read_Encoder function
+		status = (left->data_ready && right->data_ready) && (left->active && right->active);
 
 		if (!status)
 		{
-			// Update the encoder data structure
-			encoders_data.active = false;
-			encoders_data.data_ready = false;
+			if (!left->active || !right->active)
+			{
+				// Update the encoder data structure
+				encoders_data.active = false;
+				encoders_data.data_ready = false;
 
-			osDelay(100);
+				osDelay(100);
+			}
+
+			osDelay(10);
 			continue;
 		}
 
-		// Compute the delta pulses
-		int64_t delta_left = left->pulses - left->last_pulses;
-		int64_t delta_right = right->pulses - right->last_pulses;
-
-		// If the left encoder has made a full revolution handle the discontinuity
-		if (abs(delta_left) > PULSE_PER_REVOLUTION / 2)
-		{
-			delta_left -= copysignf(PULSE_PER_REVOLUTION, delta_left);
-		}
-
-		// If the right encoder has made a full revolution
-		if (abs(delta_right) > PULSE_PER_REVOLUTION / 2)
-		{
-			delta_right -= copysignf(PULSE_PER_REVOLUTION, delta_right);
-		}
-
-		// Compute the encoder velocity
-		float left_velocity = delta_left * (DISTANCE_PER_PULSE / delta_time);
-		float right_velocity = delta_right * (DISTANCE_PER_PULSE / delta_time);
+		// Mark the encoder data as not ready
+		left->data_ready = false;
+		right->data_ready = false;
 
 		// Map the encoder data to the encoder data structure
-		encoders_data.velocity = (left_velocity + right_velocity) / 2.0f;
-		encoders_data.angular_velocity = (right_velocity - left_velocity) / WHEEL_DISTANCE;
+		encoders_data.velocity = (left->velocity + right->velocity) / 2.0f;
+		encoders_data.angular_velocity = (right->velocity - left->velocity) / WHEEL_DISTANCE;
 
-		// Store the last encoder values
-		left->last_pulses = left->pulses;
-		right->last_pulses = right->pulses;
+		printf("Encoders: %.4f %.4f\n", encoders_data.velocity, encoders_data.angular_velocity);
 
 		// Update the encoder data structure
 		encoders_data.active = true;
@@ -122,9 +109,15 @@ bool encodersDataReady()
 	return encoders_data.data_ready;
 }
 
+void encodersDataConsume()
+{
+	encoders_data.data_ready = false;
+}
+
 Sensor encoders = {
 	.h = h_encoders,
 	.H = H_encoders,
 	.R = R_encoders,
 	.z = encodersMeasurement,
-	.ready = encodersDataReady};
+	.ready = encodersDataReady,
+	.consume = encodersDataConsume};

@@ -570,9 +570,6 @@ HAL_StatusTypeDef UART_Read(UART_HandleTypeDef *huart, osMutexId_t *muart, uint8
   ctx->origRxCpltCallback = huart->RxCpltCallback;
   huart->RxCpltCallback = UART_RxCpltCallback_Proxy;
 
-  // Flush any leftover data register
-  __HAL_UART_FLUSH_DRREGISTER(huart);
-
   /* Start DMA-based reception */
   status = HAL_UART_Receive_DMA(huart, pData, size);
   if (status != HAL_OK)

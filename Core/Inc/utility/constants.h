@@ -9,7 +9,7 @@
 #define WHEEL_RADIUS 0.037f												// m
 #define WHEEL_CIRCUMFERENCE (WHEEL_RADIUS * M_TWOPI)					// m
 #define DISTANCE_PER_PULSE (WHEEL_CIRCUMFERENCE / PULSE_PER_REVOLUTION) // m
-#define WHEEL_DISTANCE 0.180f											// m
+#define WHEEL_DISTANCE 0.185f											// m
 
 #define TARGET_SPEED 0.5f // m/s
 #define MAX_SPEED 1.5f	  // m/s

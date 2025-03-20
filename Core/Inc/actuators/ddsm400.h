@@ -44,7 +44,7 @@ public:
 	DDSM400(UART_HandleTypeDef *huart, osMutexId_t *muart);
 	~DDSM400();
 
-	void init(uint8_t id = DDSM400_DEFAULT_ID, bool set = false);
+	void init(uint8_t id = DDSM400_DEFAULT_ID, bool set = false, bool tx_only = false);
 
 	// Set the motor mode
 	void setMode(DDSM400_MODE mode);
@@ -83,6 +83,8 @@ public:
 private:
 	UART_HandleTypeDef *huart;
 	osMutexId_t *muart;
+
+	bool tx_only = false;
 
 	uint8_t id;
 	DDSM400_MODE mode;

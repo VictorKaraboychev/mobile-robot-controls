@@ -54,7 +54,7 @@ void StartDebugTask(void *argument)
 	// Startup loop
 	while (osKernelGetTickCount() < 1000)
 	{
-		buzzer.set(MEDIUM_POWER * blink({500, 200, 100, 100, 100}, 1000));
+		// buzzer.set(MEDIUM_POWER * blink({500, 200, 100, 100, 100}, 1000));
 
 		osDelay(10); // 100 Hz
 	}
@@ -99,37 +99,31 @@ void StartDebugTask(void *argument)
 
 		buzzer.set(OFF_POWER);
 
-		// Check if all sensors are active
-		all_sensors_active = accelerometer_data.active && magnetometer_data.active && barometer_data.active && encoders_data.active;
-
-		if (all_sensors_active)
+		if (!accelerometer_data.active) // If the IMU is not active
+		{
+			red_led1.set(MEDIUM_POWER * BLINK_1);
+		}
+		else if (!magnetometer_data.active) // If the magnetometer is not active
+		{
+			red_led1.set(MEDIUM_POWER * BLINK_2);
+		}
+		else if (!barometer_data.active) // If the barometer is not active
+		{
+			red_led1.set(MEDIUM_POWER * BLINK_3);
+		}
+		else if (!encoders_data.active) // If the encoders are not active
+		{
+			red_led1.set(MEDIUM_POWER * BLINK_4);
+		}
+		else // If all sensors are active
 		{
 			green_led1.set(MEDIUM_POWER * SLOW_BLINK);
-		}
-		else
-		{
-			if (!accelerometer_data.active) // If the IMU is not active
-			{
-				red_led1.set(MEDIUM_POWER * BLINK_1);
-			}
-			else if (!magnetometer_data.active) // If the magnetometer is not active
-			{
-				red_led1.set(MEDIUM_POWER * BLINK_2);
-			}
-			else if (!barometer_data.active) // If the barometer is not active
-			{
-				red_led1.set(MEDIUM_POWER * BLINK_3);
-			}
-			else if (!encoders_data.active) // If the encoders are not active
-			{
-				red_led1.set(MEDIUM_POWER * BLINK_4);
-			}
 		}
 
 		// If the magnetometer is calibrating beep the buzzer
 		if (accelerometer_data.is_calibrating || magnetometer_data.is_calibrating)
 		{
-			buzzer.set(LOW_POWER * FAST_BLINK);
+			// buzzer.set(LOW_POWER * FAST_BLINK);
 			green_led2.set(MEDIUM_POWER * FAST_BLINK);
 		}
 

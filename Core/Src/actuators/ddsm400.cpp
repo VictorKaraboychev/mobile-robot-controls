@@ -52,16 +52,32 @@ HAL_StatusTypeDef DDSM400::DDSM400_Message(uint8_t *tx, uint8_t *rx)
 	// Calculate the CRC
 	_tx[9] = crc8(_tx, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00);
 
-	uint8_t retries = 5;
+	uint8_t retries = 3;
 
-	// Send the message
+	HAL_StatusTypeDef tx_status = HAL_OK;
+	HAL_StatusTypeDef rx_status = HAL_OK;
+
 	do
 	{
-		status = UART_Write(this->huart, this->muart, _tx, 10, 5);
+		// Send the message
+		tx_status = UART_Write(this->huart, this->muart, _tx, 10, 5);
 
-		status = UART_Read(this->huart, this->muart, _rx, 10, 5);
-	}
-	while (status != HAL_OK && retries--);
+		// Flush any leftover data register
+		__HAL_UART_FLUSH_DRREGISTER(this->huart);
+
+		// Receive the message
+		rx_status = UART_Read(this->huart, this->muart, _rx, 10, 5);
+
+		// Check the status
+		if (rx_status != HAL_OK && (this->tx_only || rx == NULL))
+		{
+			status = tx_status;
+		}
+		else
+		{
+			status = rx_status;
+		}
+	} while (status != HAL_OK && retries--);
 
 	// Check the status
 	if (status != HAL_OK)
@@ -101,7 +117,7 @@ DDSM400::~DDSM400()
 {
 }
 
-void DDSM400::init(uint8_t id, bool set)
+void DDSM400::init(uint8_t id, bool set, bool tx_only)
 {
 	if (set)
 	{
@@ -117,6 +133,7 @@ void DDSM400::init(uint8_t id, bool set)
 	}
 
 	this->id = id;
+	this->tx_only = tx_only;
 }
 
 void DDSM400::setMode(DDSM400_MODE mode)

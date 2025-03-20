@@ -151,9 +151,15 @@ bool barometerDataReady()
 	return barometer_data.data_ready;
 }
 
+void barometerDataConsume()
+{
+	barometer_data.data_ready = false;
+}
+
 Sensor barometer = {
 	.h = h_barometer,
 	.H = H_barometer,
 	.R = R_barometer,
 	.z = barometerMeasurement,
-	.ready = barometerDataReady};
+	.ready = barometerDataReady,
+	.consume = barometerDataConsume};

@@ -136,8 +136,10 @@ void ExtendedKalmanFilter<DataType, StateDim, ControlDim, MeasurementDim>::updat
 	// Compute the innovation covariance: S = H * P * H' + R.
 	MeasurementCovariance S = H_val * this->P * H_val.transpose() + _R;
 
+	Eigen::PartialPivLU<MeasurementCovariance> lu(S);
+
 	// Compute the Kalman gain: K = P * H' * S⁻¹.
-	KalmanGain K = this->P * H_val.transpose() * S.inverse();
+	KalmanGain K = this->P * H_val.transpose() * lu.inverse();
 
 	// Update the state estimate.
 	this->x += K * (z - h_val);

@@ -115,14 +115,14 @@ osThreadId_t leftMotorTaskHandle;
 const osThreadAttr_t leftMotorTask_attributes = {
     .name = "leftMotorTask",
     .stack_size = 256 * 4,
-    .priority = (osPriority_t)osPriorityNormal,
+    .priority = (osPriority_t)osPriorityAboveNormal,
 };
 /* Definitions for rightMotorTask */
 osThreadId_t rightMotorTaskHandle;
 const osThreadAttr_t rightMotorTask_attributes = {
     .name = "rightMotorTask",
     .stack_size = 256 * 4,
-    .priority = (osPriority_t)osPriorityLow,
+    .priority = (osPriority_t)osPriorityAboveNormal,
 };
 /* Definitions for spi1Mutex */
 osMutexId_t spi1MutexHandle;

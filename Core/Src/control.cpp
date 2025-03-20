@@ -142,6 +142,9 @@ void StartFusionTask(void *argument)
 				// Get the measurement vector
 				EKF::MeasurementVector z = s->z(x);
 
+				// Mark the sensor as not ready
+				s->consume();
+
 				// Update the state estimate
 				ekf.update(z);
 			}
@@ -158,7 +161,7 @@ void StartFusionTask(void *argument)
 		robot.orientation = Eigen::Vector3f{x[3], x[4], x[5]};
 		robot.angular_velocity = Eigen::Vector3f{x[9], x[10], x[11]};
 
-		osDelayUntil(last_time + 4); // 250 Hz
+		osDelayUntil(last_time + 10); // 100 Hz
 	}
 }
 
@@ -180,7 +183,7 @@ volatile float right_speed = 0;
 void StartLeftMotorTask(void *argument)
 {
 	// Motor Initialization
-	motor1.init(0x01);
+	motor1.init(0x01, false, true);
 	motor3.init(0x03);
 
 	// Enable the motors
@@ -202,13 +205,15 @@ void StartLeftMotorTask(void *argument)
 
 		float left_rotational_velocity = left_speed / WHEEL_RADIUS;
 
+		// Set the motor velocity
 		motor1.setVelocity(left_rotational_velocity);
 		motor3.setVelocity(left_rotational_velocity);
 
-		float left_encoder_position = motor1.getPosition() * WHEEL_RADIUS;
-		float left_encoder_speed = motor1.getVelocity() * WHEEL_RADIUS;
-
-		// printf("Left: %.2f, %.4f\n", left_encoder_position, left_encoder_speed);
+		// Update the encoders data
+		encoders_data.left.position = motor3.getPosition() * WHEEL_RADIUS;
+		encoders_data.left.velocity = motor3.getVelocity() * WHEEL_RADIUS;
+		encoders_data.left.data_ready = true;
+		encoders_data.left.active = motor3.getStatus() == DDSM400_FAULT::NONE;
 
 		osDelayUntil(last_time + 25); // 40 Hz
 	}
@@ -217,7 +222,7 @@ void StartLeftMotorTask(void *argument)
 void StartRightMotorTask(void *argument)
 {
 	// Motor Initialization
-	motor2.init(0x02);
+	motor2.init(0x02, false, true);
 	motor4.init(0x04);
 
 	// Enable the motors
@@ -239,13 +244,15 @@ void StartRightMotorTask(void *argument)
 
 		float right_rotational_velocity = right_speed / WHEEL_RADIUS;
 
+		// Set the motor velocity
 		motor2.setVelocity(-right_rotational_velocity);
 		motor4.setVelocity(-right_rotational_velocity);
 
-		float right_encoder_position = motor2.getPosition() * WHEEL_RADIUS;
-		float right_encoder_speed = motor2.getVelocity() * WHEEL_RADIUS;
-
-		printf("Right: %.2f, %.4f\n", right_encoder_position, right_encoder_speed);
+		// Update the encoders data
+		encoders_data.right.position = -motor4.getPosition() * WHEEL_RADIUS;
+		encoders_data.right.velocity = -motor4.getVelocity() * WHEEL_RADIUS;
+		encoders_data.right.data_ready = true;
+		encoders_data.right.active = motor4.getStatus() == DDSM400_FAULT::NONE;
 
 		osDelayUntil(last_time + 25); // 40 Hz
 	}
@@ -266,19 +273,6 @@ void StartControlTask(void *argument)
 	{
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
-
-		// angle += velocity;
-
-		// if (angle >= max_angle || angle <= min_angle)
-		// {
-		// 	velocity *= -1.0f;
-		// }
-
-		// setServoAngle(SERVO_1, angle);
-		// setServoAngle(SERVO_2, max_angle - angle);
-
-		// setServoAngle(SERVO_1, 0);
-		// setServoAngle(SERVO_2, 0);
 
 		// Eigen::Vector2f position = robot.position.head<2>();
 		// Eigen::Vector2f target{0, 0}; // GetTarget();

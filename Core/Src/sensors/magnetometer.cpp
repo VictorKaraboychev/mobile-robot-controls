@@ -442,9 +442,15 @@ bool magnetometerDataReady()
 	return magnetometer_data.data_ready;
 }
 
+void magnetometerDataConsume()
+{
+	magnetometer_data.data_ready = false;
+}
+
 Sensor magnetometer = {
 	.h = h_magnetometer,
 	.H = H_magnetometer,
 	.R = R_magnetometer,
 	.z = magnetometerMeasurement,
-	.ready = magnetometerDataReady};
+	.ready = magnetometerDataReady,
+	.consume = magnetometerDataConsume};
