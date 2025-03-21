@@ -42,6 +42,7 @@ struct Sensor
 #include "servo.h"
 #include "pid.h"
 #include "pwm.h"
+#include "debug.h"
 
 struct RobotState
 {

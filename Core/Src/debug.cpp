@@ -22,6 +22,13 @@ bool blink(std::initializer_list<uint16_t> periods, uint32_t duration)
 	return state;
 }
 
+float buzzer_power = OFF_POWER;
+
+void setBuzzer(float power)
+{
+	buzzer_power = power;
+}
+
 PWM green_led1(&htim4, TIM_CHANNEL_3);
 PWM green_led2(&htim4, TIM_CHANNEL_2);
 PWM green_led3(&htim4, TIM_CHANNEL_1);
@@ -134,6 +141,11 @@ void StartDebugTask(void *argument)
 		{
 			buzzer.set(LOW_POWER * FAST_BLINK);
 			green_led2.set(MEDIUM_POWER * FAST_BLINK);
+		}
+
+		if (buzzer_power > OFF_POWER)
+		{
+			buzzer.set(buzzer_power);
 		}
 
 		osDelay(10); // 100 Hz

@@ -43,6 +43,7 @@ enum PrintLevel
 extern PrintLevel print_level;
 
 bool blink(std::initializer_list<uint16_t> periods, uint32_t duration);
+void setBuzzer(float power);
 void StartDebugTask(void *argument);
 
 #endif /* __CONTROL_H__ */
