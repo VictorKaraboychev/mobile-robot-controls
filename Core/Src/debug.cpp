@@ -1,6 +1,6 @@
 #include "debug.h"
 
-PrintLevel print_level = PL_DEBUG;
+PrintLevel print_level = PL_INFO;
 
 bool blink(std::initializer_list<uint16_t> periods, uint32_t duration)
 {
