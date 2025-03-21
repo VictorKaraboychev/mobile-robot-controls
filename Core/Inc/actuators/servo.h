@@ -34,7 +34,7 @@ public:
 	}
 
 	// Set the servo angle in degrees, speed in degrees/s
-	void setAngle(float angle, float speed = 0.0f)
+	void setAngle(float angle, float speed = INFINITY)
 	{
 		// Constrain the angle to the valid range
 		float limited_angle = fminf(fmaxf(angle, min_angle), max_angle);
