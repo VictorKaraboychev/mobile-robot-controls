@@ -293,22 +293,22 @@ void StartRightMotorTask(void *argument)
 
 void pickup()
 {
-	servo1.setAngle(228, 60);
+	servo1.setAngle(228);
 
 	osDelay(750);
 
-	servo1.setAngle(40, 60);
+	servo1.setAngle(40);
 }
 
 void dropoff()
 {
-	servo1.setAngle(200, 60);
+	servo1.setAngle(200);
 	relay.on();
 
 	osDelay(1000);
 
 	relay.off();
-	servo1.setAngle(40, 60);
+	servo1.setAngle(40);
 }
 
 void StartControlTask(void *argument)
@@ -321,6 +321,16 @@ void StartControlTask(void *argument)
 
 	// Relay Initialization
 	relay.init();
+
+	// DEMO CODE
+
+	// Pickup the object
+	pickup();
+
+	osDelay(2000);
+
+	// Dropoff the object
+	dropoff();
 
 	float initial_time = osKernelGetTickCount() / 1000.0f;
 	uint32_t last_time = osKernelGetTickCount();
