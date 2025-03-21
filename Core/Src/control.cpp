@@ -322,6 +322,8 @@ void StartControlTask(void *argument)
 	// Relay Initialization
 	relay.init();
 
+	bool finished = false;
+
 	float initial_time = osKernelGetTickCount() / 1000.0f;
 	uint32_t last_time = osKernelGetTickCount();
 
@@ -330,45 +332,61 @@ void StartControlTask(void *argument)
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
 
-		// Eigen::Vector2f position = robot.position.head<2>();
-		// Eigen::Vector2f target{0, 0};
+		Eigen::Vector2f position = robot.position.head<2>();
+		Eigen::Vector2f target{0, 0};
 
-		// // Set the target over time
-		// float t = (osKernelGetTickCount() / 1000.0f) - initial_time;
+		// Set the target over time
+		float t = (osKernelGetTickCount() / 1000.0f) - initial_time;
 		// float r = 0.5f;
-		// float s = 0.75f;
+		float s = 0.75f; // m/s
 
-		// // Parametric equation of a circle
+		// Parametric equation of a circle
 		// target[0] = r * (1 - cosf(s * t));
 		// target[1] = r * sinf(s * t);
 
-		// // Calculate the euclidean distance to the target
-		// float distance = (target - position).norm();
-		// float target_speed = distancePID.update(distance, 0, delta_time);
+		// Parametric equation of a line
+		target[1] = std::min(1.0f, s * t);
 
-		// // Calculate the curvature
-		// float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
+		// Calculate the euclidean distance to the target
+		float distance = (target - position).norm();
+		float target_speed = distancePID.update(distance, 0, delta_time);
 
-		// // Calculate the left and right wheel velocities
-		// left_velocity = target_speed * (1 - curvature * WHEEL_DISTANCE / 2.0f);
-		// right_velocity = target_speed * (1 + curvature * WHEEL_DISTANCE / 2.0f);
+		// Calculate the curvature
+		float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
 
-		// // Limit the wheel velocities to the maximum speed
-		// float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
+		float curvature_limit = 0.5f;
+		curvature = std::min(curvature_limit, std::max(-curvature_limit, curvature)); // Just for straight drive test
 
-		// // If the maximum velocity is greater than the maximum speed (maintain the ratio)
-		// if (max_velocity > MAX_SPEED)
-		// {
-		// 	left_velocity *= MAX_SPEED / max_velocity;
-		// 	right_velocity *= MAX_SPEED / max_velocity;
-		// }
+		// Calculate the left and right wheel velocities
+		left_velocity = target_speed * (1 - curvature * WHEEL_DISTANCE / 2.0f);
+		right_velocity = target_speed * (1 + curvature * WHEEL_DISTANCE / 2.0f);
 
-		// // If the distance is less than the threshold, stop
-		// if (distance < 0.01f)
-		// {
-		// 	left_velocity = 0;
-		// 	right_velocity = 0;
-		// }
+		// Limit the wheel velocities to the maximum speed
+		float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
+
+		// If the maximum velocity is greater than the maximum speed (maintain the ratio)
+		if (max_velocity > MAX_SPEED)
+		{
+			left_velocity *= MAX_SPEED / max_velocity;
+			right_velocity *= MAX_SPEED / max_velocity;
+		}
+
+		// If the distance is less than the threshold, stop
+		distance = (Eigen::Vector2f{0, 1} - position).norm();
+		if (distance < 0.01f)
+		{
+			left_velocity = 0;
+			right_velocity = 0;
+
+			if (!finished)
+			{
+				setBuzzer(MEDIUM_POWER);
+				osDelay(250);
+				setBuzzer(OFF_POWER);
+
+				finished = true;
+			}
+		}
 
 		// float time = (osKernelGetTickCount() / 1000.0f) - initial_time;
 
