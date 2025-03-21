@@ -86,12 +86,17 @@ HAL_StatusTypeDef DDSM400::DDSM400_Message(uint8_t *tx, uint8_t *rx)
 		return status;
 	}
 
+	if (this->tx_only || rx == NULL)
+	{
+		return status;
+	}
+
 	// Confirm the CRC
 	uint8_t crc = crc8(_rx, 9, DDSM400_CRC_POLY, DDSM400_CRC_INIT, true, true, 0x00);
 
 	if (crc != _rx[9])
 	{
-		printf("CRC Error\n");
+		printf("CRC Error ID: %d\n", this->id);
 		return HAL_ERROR;
 	}
 
