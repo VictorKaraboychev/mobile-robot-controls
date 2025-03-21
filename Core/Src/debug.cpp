@@ -54,7 +54,7 @@ void StartDebugTask(void *argument)
 	// Startup loop
 	while (osKernelGetTickCount() < 1000)
 	{
-		// buzzer.set(MEDIUM_POWER * blink({500, 200, 100, 100, 100}, 1000));
+		buzzer.set(LOW_POWER * blink({500, 200, 100, 100, 100}, 1000));
 
 		osDelay(10); // 100 Hz
 	}
@@ -84,7 +84,16 @@ void StartDebugTask(void *argument)
 			// 	   robot.orientation[0] * RAD_TO_DEG, robot.orientation[1] * RAD_TO_DEG, robot.orientation[2] * RAD_TO_DEG,
 			// 	   robot.angular_velocity[0] * RAD_TO_DEG, robot.angular_velocity[1] * RAD_TO_DEG, robot.angular_velocity[2] * RAD_TO_DEG);
 
-			// printf("[DEBUG]: %.2f %.2f %.2f \n", robot.orientation[0] * RAD_TO_DEG, robot.orientation[1] * RAD_TO_DEG, robot.orientation[2] * RAD_TO_DEG);
+			printf("[DEBUG]: s: (%.2f %.2f %.2f) v: (%.2f %.2f %.2f) t: (%.2f %.2f %.2f) \n",
+				   robot.position[0],
+				   robot.position[1],
+				   robot.position[2],
+				   robot.velocity[0],
+				   robot.velocity[1],
+				   robot.velocity[2],
+				   robot.orientation[0] * RAD_TO_DEG,
+				   robot.orientation[1] * RAD_TO_DEG,
+				   robot.orientation[2] * RAD_TO_DEG);
 			last_time = osKernelGetTickCount();
 		}
 
@@ -123,7 +132,7 @@ void StartDebugTask(void *argument)
 		// If the magnetometer is calibrating beep the buzzer
 		if (accelerometer_data.is_calibrating || magnetometer_data.is_calibrating)
 		{
-			// buzzer.set(LOW_POWER * FAST_BLINK);
+			buzzer.set(LOW_POWER * FAST_BLINK);
 			green_led2.set(MEDIUM_POWER * FAST_BLINK);
 		}
 

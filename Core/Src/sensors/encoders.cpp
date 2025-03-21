@@ -44,8 +44,6 @@ void StartEncodersTask(void *argument)
 		encoders_data.velocity = (left->velocity + right->velocity) / 2.0f;
 		encoders_data.angular_velocity = (right->velocity - left->velocity) / WHEEL_DISTANCE;
 
-		printf("Encoders: %.4f %.4f\n", encoders_data.velocity, encoders_data.angular_velocity);
-
 		// Update the encoder data structure
 		encoders_data.active = true;
 		encoders_data.data_ready = true;
@@ -90,11 +88,15 @@ EKF::MeasurementVector encodersMeasurement(const EKF::StateVector &x)
 	float forward_velocity = encoders_data.velocity;
 	float angular_velocity = encoders_data.angular_velocity;
 
-	// Compute x and y velocities
-	float theta = robot.orientation[2];
+	// Get orientation from the state vector x
+	Eigen::Vector3f orientation{
+		x[3], // φ (roll)
+		x[4], // θ (pitch)
+		x[5]  // ψ (yaw)
+	};
 
-	float v_x = -forward_velocity * sin(theta);
-	float v_y = forward_velocity * cos(theta);
+	float v_x = -forward_velocity * sin(orientation[2]);
+	float v_y = forward_velocity * cos(orientation[2]);
 
 	// Update the state vector
 	EKF::MeasurementVector z(KALMAN_ENCODERS_MEASUREMENT_SIZE);

@@ -9,6 +9,7 @@
 #include <Eigen/Dense>
 #include "constants.h"
 #include "control.h"
+#include "utility.h"
 
 #include "lsm6dso.h"
 

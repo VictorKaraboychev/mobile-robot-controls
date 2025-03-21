@@ -98,8 +98,15 @@ EKF::ProcessCovariance Q = Eigen::DiagonalMatrix<float, KALMAN_STATE_SIZE>{
 	1.0e-5f, // z'' 14
 };
 
+// 90 degrees on the z-axis
+Eigen::Vector3f mounting_orientation{
+	0.0f,			   // φ (roll)
+	0.0f,			   // θ (pitch)
+	DEG_TO_RAD * 90.0f // ψ (yaw)
+};
+
 // Sensors
-Sensor *sensors[SENSOR_COUNT] = {&gyroscope};
+Sensor *sensors[SENSOR_COUNT] = {&gyroscope, &encoders};
 
 EKF ekf(f, F, Q);
 RobotState robot;
@@ -127,11 +134,29 @@ void StartFusionTask(void *argument)
 		// Predict the state
 		ekf.predict(u);
 
-		// Update the state from the state vector
+		// Update the state from the state vector for the sensors
 		x = ekf.getState();
 
+		// // Get orientation from the state vector x
+		// Eigen::Vector3f orientation{
+		// 	x[3], // φ (roll)
+		// 	x[4], // θ (pitch)
+		// 	x[5]  // ψ (yaw)
+		// };
+
+		// // Construct rotation matrices using the ZYX (yaw-pitch-roll) convention.
+		// Eigen::Matrix3f R_mounting = eulerToMatrix(mounting_orientation);
+
+		// // To undo the mounting offset, apply the inverse of R_mounting.
+		// Eigen::Vector3f offset_orientation = R_mounting.transpose() * orientation;
+
+		// // Update the state vector
+		// state[3] = offset_orientation[0];
+		// state[4] = offset_orientation[1];
+		// state[5] = offset_orientation[2];
+
 		// Check all sensors for updates
-		for (int i = 0; i < SENSOR_COUNT; i++)
+		for (uint8_t i = 0; i < SENSOR_COUNT; i++)
 		{
 			Sensor *s = sensors[i];
 			if (s->ready())
@@ -165,7 +190,8 @@ void StartFusionTask(void *argument)
 	}
 }
 
-PID turnPID(0.5f, 0.01f, 0.0f, -0.2f, 0.2f, -0.2f, 0.2f);
+// PID turnPID(0.5f, 0.01f, 0.0f, -0.2f, 0.2f, -0.2f, 0.2f);
+PID distancePID(0.75f, 0.01f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
 Servo servo1(&htim12, TIM_CHANNEL_2, 270, 0);
 PWM relay(&htim12, TIM_CHANNEL_1);
@@ -178,11 +204,14 @@ DDSM400 motor2(&huart7, &uart7MutexHandle); // Front right
 DDSM400 motor3(&huart4, &uart4MutexHandle); // Rear left
 DDSM400 motor4(&huart7, &uart7MutexHandle); // Rear right
 
-volatile float left_speed = 0;
-volatile float right_speed = 0;
+volatile float left_velocity = 0;
+volatile float right_velocity = 0;
 
 void StartLeftMotorTask(void *argument)
 {
+	// Wait for the sensors to initialize
+	osDelay(3000);
+
 	// Motor Initialization
 	motor1.init(0x01, false, true);
 	motor3.init(0x03);
@@ -204,7 +233,7 @@ void StartLeftMotorTask(void *argument)
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
 
-		float left_rotational_velocity = left_speed / WHEEL_RADIUS;
+		float left_rotational_velocity = left_velocity / WHEEL_RADIUS;
 
 		// Set the motor velocity
 		motor1.setVelocity(left_rotational_velocity);
@@ -222,6 +251,9 @@ void StartLeftMotorTask(void *argument)
 
 void StartRightMotorTask(void *argument)
 {
+	// Wait for the sensors to initialize
+	osDelay(3000);
+
 	// Motor Initialization
 	motor2.init(0x02, false, true);
 	motor4.init(0x04);
@@ -243,7 +275,7 @@ void StartRightMotorTask(void *argument)
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
 
-		float right_rotational_velocity = right_speed / WHEEL_RADIUS;
+		float right_rotational_velocity = right_velocity / WHEEL_RADIUS;
 
 		// Set the motor velocity
 		motor2.setVelocity(-right_rotational_velocity);
@@ -259,13 +291,33 @@ void StartRightMotorTask(void *argument)
 	}
 }
 
+void pickup()
+{
+	servo1.setAngle(228, 60);
+
+	osDelay(750);
+
+	servo1.setAngle(40, 60);
+}
+
+void dropoff()
+{
+	servo1.setAngle(200, 60);
+	relay.on();
+
+	osDelay(1000);
+
+	relay.off();
+	servo1.setAngle(40, 60);
+}
+
 void StartControlTask(void *argument)
 {
 	// Gyro calibration takes 5 seconds, wait for it to finish
 	osDelay(6000);
 
 	// Servo Initialization
-	servo1.init(50);
+	servo1.init(40);
 
 	// Relay Initialization
 	relay.init();
@@ -279,14 +331,27 @@ void StartControlTask(void *argument)
 		last_time = osKernelGetTickCount();
 
 		// Eigen::Vector2f position = robot.position.head<2>();
-		// Eigen::Vector2f target{0, 0}; // GetTarget();
+		// Eigen::Vector2f target{0, 0};
+
+		// // Set the target over time
+		// float t = (osKernelGetTickCount() / 1000.0f) - initial_time;
+		// float r = 0.5f;
+		// float s = 0.75f;
+
+		// // Parametric equation of a circle
+		// target[0] = r * (1 - cosf(s * t));
+		// target[1] = r * sinf(s * t);
+
+		// // Calculate the euclidean distance to the target
+		// float distance = (target - position).norm();
+		// float target_speed = distancePID.update(distance, 0, delta_time);
 
 		// // Calculate the curvature
-		// float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2], target);
+		// float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
 
 		// // Calculate the left and right wheel velocities
-		// float left_velocity = TARGET_SPEED * (1 - curvature * WHEEL_DISTANCE / 2.0f);
-		// float right_velocity = TARGET_SPEED * (1 + curvature * WHEEL_DISTANCE / 2.0f);
+		// left_velocity = target_speed * (1 - curvature * WHEEL_DISTANCE / 2.0f);
+		// right_velocity = target_speed * (1 + curvature * WHEEL_DISTANCE / 2.0f);
 
 		// // Limit the wheel velocities to the maximum speed
 		// float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
@@ -298,12 +363,19 @@ void StartControlTask(void *argument)
 		// 	right_velocity *= MAX_SPEED / max_velocity;
 		// }
 
+		// // If the distance is less than the threshold, stop
+		// if (distance < 0.01f)
+		// {
+		// 	left_velocity = 0;
+		// 	right_velocity = 0;
+		// }
+
 		// float time = (osKernelGetTickCount() / 1000.0f) - initial_time;
 
 		// float speed = 0.5f * sinf(0.2 * M_PI * time);
 
-		// left_speed = speed;
-		// right_speed = speed;
+		// left_velocity = speed;
+		// right_velocity = speed;
 
 		// float speed = turnPID.update(M_PI_2, robot.orientation[0], delta_time);
 
@@ -321,7 +393,7 @@ void StartControlTask(void *argument)
 		// CSV print
 		// printf("%.2f, %.4f, %.4f\n", time, left_position, left_speed);
 
-		osDelayUntil(last_time + 20); // 50 Hz
+		osDelayUntil(last_time + 10); // 100 Hz
 	}
 }
 

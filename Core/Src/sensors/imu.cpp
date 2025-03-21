@@ -179,16 +179,6 @@ EKF::MeasurementCovariance R_accelerometer = Eigen::DiagonalMatrix<float, KALMAN
 	1e-4f  // z''
 };
 
-Eigen::Quaternionf euler2Quaternion(const float roll, const float pitch, const float yaw)
-{
-	Eigen::AngleAxisf rollAngle(roll, Eigen::Vector3f::UnitX());
-	Eigen::AngleAxisf pitchAngle(pitch, Eigen::Vector3f::UnitY());
-	Eigen::AngleAxisf yawAngle(yaw, Eigen::Vector3f::UnitZ());
-
-	Eigen::Quaternionf q = rollAngle * pitchAngle * yawAngle;
-	return q;
-}
-
 EKF::MeasurementVector accelerometerMeasurement(const EKF::StateVector &x)
 {
 	const Eigen::Vector3f &acceleration = accelerometer_data.acceleration;
@@ -198,7 +188,7 @@ EKF::MeasurementVector accelerometerMeasurement(const EKF::StateVector &x)
 	// Magnitude of the acceleration vector
 	float magnitude = acceleration.norm();
 
-	// Compute pitch and roll
+	// Get orientation from the state vector x
 	Eigen::Vector3f orientation{
 		x[3], // φ (roll)
 		x[4], // θ (pitch)
@@ -206,8 +196,8 @@ EKF::MeasurementVector accelerometerMeasurement(const EKF::StateVector &x)
 	};
 
 	// Rotate the acceleration vector to the world frame
-	Eigen::Quaternionf q = euler2Quaternion(orientation[0], orientation[1], orientation[2]);
-	Eigen::Vector3f world_acceleration = q.matrix().transpose() * acceleration;
+	Eigen::Matrix3f q = eulerToMatrix(orientation);
+	Eigen::Vector3f world_acceleration = q.transpose() * acceleration;
 
 	// Subtract gravity from the z-axis
 	world_acceleration[2] += GRAVITY;
@@ -279,11 +269,18 @@ EKF::MeasurementVector gyroscopeMeasurement(const EKF::StateVector &x)
 {
 	const Eigen::Vector3f &angular_velocity = gyroscope_data.angular_velocity;
 
-	float s1 = sin(x[3]);
-	float c1 = cos(x[3]);
+	// Get orientation from the state vector x
+	Eigen::Vector3f orientation{
+		x[3], // φ (roll)
+		x[4], // θ (pitch)
+		x[5]  // ψ (yaw)
+	};
 
-	float c2 = cos(x[4]);
-	float t2 = tan(x[4]);
+	float s1 = sin(orientation[1]);
+	float c1 = cos(orientation[1]);
+
+	float c2 = cos(orientation[2]);
+	float t2 = tan(orientation[2]);
 
 	float p = angular_velocity[0];
 	float q = angular_velocity[1];

@@ -11,8 +11,7 @@
 #define DISTANCE_PER_PULSE (WHEEL_CIRCUMFERENCE / PULSE_PER_REVOLUTION) // m
 #define WHEEL_DISTANCE 0.185f											// m
 
-#define TARGET_SPEED 0.5f // m/s
-#define MAX_SPEED 1.5f	  // m/s
+#define MAX_SPEED 1.5f // m/s
 
 #define MAX_ACCELERATION 1.0f // m/s^2
 

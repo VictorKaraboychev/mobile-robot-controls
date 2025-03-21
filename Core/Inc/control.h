@@ -11,13 +11,14 @@
 #include "constants.h"
 #include "extended_kalman_filter.h"
 #include "pure_pursuit.h"
+#include "utility.h"
 
 #include <stdio.h>
 
 #define KALMAN_STATE_SIZE 15
 #define KALMAN_CONTROL_SIZE 1
 
-#define SENSOR_COUNT 1
+#define SENSOR_COUNT 2
 
 using EKF = ExtendedKalmanFilter<float, KALMAN_STATE_SIZE, KALMAN_CONTROL_SIZE>;
 
