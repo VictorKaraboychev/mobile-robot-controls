@@ -295,7 +295,7 @@ void pickup()
 {
 	servo1.setAngle(228);
 
-	osDelay(750);
+	osDelay(750); // Pick up the tape with the servo
 
 	servo1.setAngle(40);
 }
@@ -305,11 +305,13 @@ void dropoff()
 	servo1.setAngle(200);
 	relay.on();
 
-	osDelay(1000);
+	osDelay(1500); // Cut the tape with the relay
 
 	relay.off();
 	servo1.setAngle(40);
 }
+
+Eigen::Vector2f target{0, 0};
 
 void StartControlTask(void *argument)
 {
@@ -330,68 +332,44 @@ void StartControlTask(void *argument)
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
 
-		// Eigen::Vector2f position = robot.position.head<2>();
-		// Eigen::Vector2f target{0, 0};
+		Eigen::Vector2f position = robot.position.head<2>();
 
-		// // Set the target over time
-		// float t = (osKernelGetTickCount() / 1000.0f) - initial_time;
-		// float r = 0.5f;
-		// float s = 0.75f;
+		// Calculate the euclidean distance to the target
+		float distance_to_target = (target - position).norm();
+		float angle_to_target = atan2f(target[1] - position[1], target[0] - position[0]);
 
-		// // Parametric equation of a circle
-		// target[0] = r * (1 - cosf(s * t));
-		// target[1] = r * sinf(s * t);
+		float target_speed = distancePID.update(distance_to_target, 0, delta_time);
 
-		// // Calculate the euclidean distance to the target
-		// float distance = (target - position).norm();
-		// float target_speed = distancePID.update(distance, 0, delta_time);
+		// If target is behind the robot, reverse
+		if (angle_to_target < 0)
+		{
+			target_speed *= -1;
+		}
 
-		// // Calculate the curvature
-		// float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
+		// Calculate the curvature
+		float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
 
-		// // Calculate the left and right wheel velocities
-		// left_velocity = target_speed * (1 - curvature * WHEEL_DISTANCE / 2.0f);
-		// right_velocity = target_speed * (1 + curvature * WHEEL_DISTANCE / 2.0f);
+		// Calculate the left and right wheel velocities
+		left_velocity = target_speed * (1 - curvature * WHEEL_DISTANCE / 2.0f);
+		right_velocity = target_speed * (1 + curvature * WHEEL_DISTANCE / 2.0f);
 
-		// // Limit the wheel velocities to the maximum speed
-		// float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
+		// Limit the wheel velocities to the maximum speed
+		float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
 
-		// // If the maximum velocity is greater than the maximum speed (maintain the ratio)
-		// if (max_velocity > MAX_SPEED)
-		// {
-		// 	left_velocity *= MAX_SPEED / max_velocity;
-		// 	right_velocity *= MAX_SPEED / max_velocity;
-		// }
+		// If the maximum velocity is greater than the maximum speed (maintain the ratio)
+		if (max_velocity > MAX_SPEED)
+		{
+			left_velocity *= MAX_SPEED / max_velocity;
+			right_velocity *= MAX_SPEED / max_velocity;
+		}
 
-		// // If the distance is less than the threshold, stop
-		// if (distance < 0.01f)
-		// {
-		// 	left_velocity = 0;
-		// 	right_velocity = 0;
-		// }
-
-		// float time = (osKernelGetTickCount() / 1000.0f) - initial_time;
-
-		// float speed = 0.5f * sinf(0.2 * M_PI * time);
-
-		// left_velocity = speed;
-		// right_velocity = speed;
-
-		// float speed = turnPID.update(M_PI_2, robot.orientation[0], delta_time);
-
-		// left_speed = speed;
-		// right_speed = -speed;
-
-		// servo1.setAngle(220, 60);
-		// relay.on();
-
-		// osDelay(750);
-
-		// relay.off();
-		// servo1.setAngle(45, 60);
-
-		// CSV print
-		// printf("%.2f, %.4f, %.4f\n", time, left_position, left_speed);
+		// If the distance is less than the threshold, stop
+		float threshold = 0.05f;
+		if (distance_to_target < threshold)
+		{
+			left_velocity = 0.0f;
+			right_velocity = 0.0f;
+		}
 
 		osDelayUntil(last_time + 10); // 100 Hz
 	}
@@ -422,19 +400,64 @@ void I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
 	uint8_t command = rx[0];
 
-	// Next 4 bytes are the float value in IEEE 754 format
-	float dx = 0;
-	memcpy(&dx, &rx[1], 4);
+	switch (command)
+	{
+	case 0x01: // Done the path
+	{
+	}
+	break;
+	case 0x02: // No path detected
+	{
+		target = robot.position.head<2>();
+	}
+	break;
+	case 0x05: // Enabled and ready to start
+	{
+	}
+	break;
+	case 0x10: // New target position
+	{
+		// Next 4 bytes are the float value in IEEE 754 format
+		float dx = 0;
+		memcpy(&dx, &rx[1], 4);
 
-	// Next 4 bytes are the float value in IEEE 754 format
-	float dy = 0;
-	memcpy(&dy, &rx[5], 4);
+		// Next 4 bytes are the float value in IEEE 754 format
+		float dy = 0;
+		memcpy(&dy, &rx[5], 4);
 
-	// Next 4 bytes are the float value in IEEE 754 format
-	float theta = 0;
-	memcpy(&theta, &rx[9], 4);
+		// Next 4 bytes are the float value in IEEE 754 format
+		float theta = 0;
+		memcpy(&theta, &rx[9], 4);
 
-	printf("Command: %d, dx: %.2f, dy: %.2f, theta: %.2f\n", command, dx, dy, theta);
+		float R = 0.04f;
+		float D = 0.15f;
+		float O = 0.0f; //-0.018f;
+
+		float phi = robot.orientation[2];
+
+		Eigen::Rotation2D rotation(phi);
+
+		Eigen::Vector2f robot_position{robot.position[0], robot.position[1]};
+		Eigen::Vector2f camera_target_position{dx + O, R * dy + D};
+
+		target = robot_position + rotation * camera_target_position;
+
+		// printf("Command: %.4f %.4f %.4f\n", target_position[0], target_position[1], theta);
+	}
+	break;
+	case 0x11: // Pickup
+	{
+		pickup();
+	}
+	break;
+	case 0x12: // Dropoff
+	{
+		dropoff();
+	}
+
+	default:
+		break;
+	}
 }
 
 void StartCommTask(void *argument)
