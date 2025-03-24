@@ -209,12 +209,13 @@ volatile float right_velocity = 0;
 
 void StartLeftMotorTask(void *argument)
 {
-	// Wait for the sensors to initialize
-	osDelay(3000);
-
 	// Motor Initialization
 	motor1.init(0x01, false, true);
 	motor3.init(0x03);
+
+	// Disable the motors
+	motor1.disable();
+	motor3.disable();
 
 	// Set the default acceleration
 	float rotational_acceleration = MAX_ACCELERATION / WHEEL_RADIUS;
@@ -247,12 +248,13 @@ void StartLeftMotorTask(void *argument)
 
 void StartRightMotorTask(void *argument)
 {
-	// Wait for the sensors to initialize
-	osDelay(3000);
-
 	// Motor Initialization
 	motor2.init(0x02, false, true);
 	motor4.init(0x04);
+
+	// Disable the motors
+	motor2.disable();
+	motor4.disable();
 
 	// Set the default acceleration
 	float rotational_acceleration = MAX_ACCELERATION / WHEEL_RADIUS;
