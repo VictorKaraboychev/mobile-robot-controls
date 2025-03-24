@@ -423,27 +423,11 @@ void StartControlTask(void *argument)
 }
 
 // I2C Communication
-const uint8_t byte_count = 13;
-uint8_t rx[byte_count];
+uint8_t rx_count = 0;
+uint8_t rx_count_max = 0;
+uint8_t rx[256];
 
-void I2C_ListenCpltCallback(I2C_HandleTypeDef *hi2c)
-{
-	HAL_I2C_EnableListen_IT(hi2c);
-}
-
-void I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, uint16_t AddrMatchCode)
-{
-	if (TransferDirection == I2C_DIRECTION_TRANSMIT) // if the master wants to transmit the data
-	{
-		HAL_I2C_Slave_Sequential_Receive_IT(hi2c, rx, byte_count, I2C_FIRST_AND_LAST_FRAME);
-	}
-	else // master requesting the data is not supported yet
-	{
-		Error_Handler();
-	}
-}
-
-void I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
+void Process_Data()
 {
 	uint8_t command = rx[0];
 
@@ -506,9 +490,54 @@ void I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
 	{
 		dropoff();
 	}
-
 	default:
 		break;
+	}
+}
+
+void I2C_ListenCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	HAL_I2C_EnableListen_IT(hi2c);
+}
+
+void I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, uint16_t AddrMatchCode)
+{
+	if (TransferDirection == I2C_DIRECTION_TRANSMIT) // if the master wants to transmit the data
+	{
+		rx_count = 0;
+
+		// receive using sequential function.
+		HAL_I2C_Slave_Sequential_Receive_IT(hi2c, &rx_count_max, 1, I2C_FIRST_FRAME);
+	}
+	else if (TransferDirection == I2C_DIRECTION_RECEIVE) // if the master wants to receive the data
+	{
+		rx_count = 0;
+	}
+	else
+	{
+		Error_Handler();
+	}
+}
+
+void I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	rx_count++;
+
+	if (rx_count < rx_count_max) // If there are more bytes to receive
+	{
+		if (rx_count == rx_count_max - 1)
+		{
+			HAL_I2C_Slave_Sequential_Receive_IT(hi2c, rx + rx_count - 1, 1, I2C_LAST_FRAME);
+		}
+		else
+		{
+			HAL_I2C_Slave_Sequential_Receive_IT(hi2c, rx + rx_count - 1, 1, I2C_NEXT_FRAME);
+		}
+	}
+
+	if (rx_count == rx_count_max) // If all the bytes have been received
+	{
+		Process_Data();
 	}
 }
 
