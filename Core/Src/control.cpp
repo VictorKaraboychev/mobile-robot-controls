@@ -216,10 +216,6 @@ void StartLeftMotorTask(void *argument)
 	motor1.init(0x01, false, true);
 	motor3.init(0x03);
 
-	// Enable the motors
-	motor1.enable();
-	motor3.enable();
-
 	// Set the default acceleration
 	float rotational_acceleration = MAX_ACCELERATION / WHEEL_RADIUS;
 
@@ -257,10 +253,6 @@ void StartRightMotorTask(void *argument)
 	// Motor Initialization
 	motor2.init(0x02, false, true);
 	motor4.init(0x04);
-
-	// Enable the motors
-	motor2.enable();
-	motor4.enable();
 
 	// Set the default acceleration
 	float rotational_acceleration = MAX_ACCELERATION / WHEEL_RADIUS;
@@ -311,6 +303,7 @@ void dropoff()
 	servo1.setAngle(40);
 }
 
+bool state = false;
 Eigen::Vector2f target{0, 0};
 
 void StartControlTask(void *argument)
@@ -324,6 +317,8 @@ void StartControlTask(void *argument)
 	// Relay Initialization
 	relay.init();
 
+	bool last_state = false;
+
 	float initial_time = osKernelGetTickCount() / 1000.0f;
 	uint32_t last_time = osKernelGetTickCount();
 
@@ -331,6 +326,56 @@ void StartControlTask(void *argument)
 	{
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
+
+		if (!state)
+		{
+			left_velocity = 0.0f;
+			right_velocity = 0.0f;
+
+			setBuzzer(0.0f);
+
+			if (last_state) // Transition from enabled to disabled
+			{
+				// Disable the motors
+				motor1.disable();
+				motor2.disable();
+				motor3.disable();
+				motor4.disable();
+
+				// Reset the servo and relay
+				servo1.setAngle(40);
+				relay.off();
+
+				float t1 = osKernelGetTickCount();
+
+				while (osKernelGetTickCount() - t1 < 1550)
+				{
+					setBuzzer(MEDIUM_POWER * BLINK_2);
+					osDelay(10);
+				}
+				setBuzzer(OFF_POWER);
+
+				last_state = false;
+			}
+
+			osDelayUntil(last_time + 10); // 100 Hz
+			continue;
+		}
+		else
+		{
+			if (!last_state) // Transition from disabled to enabled
+			{
+				initial_time = osKernelGetTickCount() / 1000.0f;
+
+				// Enable the motors
+				motor1.enable();
+				motor2.enable();
+				motor3.enable();
+				motor4.enable();
+
+				last_state = true;
+			}
+		}
 
 		Eigen::Vector2f position = robot.position.head<2>();
 
@@ -413,8 +458,13 @@ void I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
 	break;
 	case 0x05: // Enabled and ready to start
 	{
+		state = true;
 	}
 	break;
+	case 0x06: // Disabled
+	{
+		state = false;
+	}
 	case 0x10: // New target position
 	{
 		// Next 4 bytes are the float value in IEEE 754 format
