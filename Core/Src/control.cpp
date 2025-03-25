@@ -312,6 +312,9 @@ void enable()
 	motor2.enable();
 	motor3.enable();
 	motor4.enable();
+
+	// Set servo to initial position
+	servo1.setAngle(135);
 }
 
 void disable()
