@@ -26,6 +26,9 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include "usb_device.h"
+#include "usbd_cdc_if.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -170,7 +173,6 @@ extern void StartCommTask(void *argument);
 extern void StartLeftMotorTask(void *argument);
 extern void StartRightMotorTask(void *argument);
 
-extern void MX_USB_DEVICE_Init(void);
 void MX_FREERTOS_Init(void); /* (MISRA C 2004 rule 8.1) */
 
 /* Hook prototypes */
@@ -283,16 +285,42 @@ void MX_FREERTOS_Init(void)
  * @retval None
  */
 /* USER CODE END Header_StartDefaultTask */
+uint8_t usb_tx_length = 0;
+uint8_t usb_tx_buffer[512];
+
 void StartDefaultTask(void *argument)
 {
   /* init code for USB_DEVICE */
-  // MX_USB_DEVICE_Init();
+  MX_USB_DEVICE_Init();
   /* USER CODE BEGIN StartDefaultTask */
 
-  /* Infinite loop */
+  // Transmit a message over USB while there is data in the buffer and the device is connected
   while (1)
   {
-    osDelay(100);
+    if (usb_tx_length > 0)
+    {
+      // Wait for the USB mutex
+      osMutexAcquire(usbMutexHandle, osWaitForever);
+
+      // Transmit the data
+      uint8_t status = USBD_OK;
+
+      do
+      {
+        status = CDC_Transmit_FS(usb_tx_buffer, usb_tx_length);
+        osDelay(1);
+      } while (status != USBD_OK);
+
+      // Clear the buffer
+      usb_tx_length = 0;
+
+      // Release the USB mutex
+      osMutexRelease(usbMutexHandle);
+    }
+    else
+    {
+      osDelay(100);
+    }
   }
   /* USER CODE END StartDefaultTask */
 }

@@ -26,6 +26,17 @@
 #define BLINK_4 blink({200, 150, 200, 150, 200, 150, 200, 1000}, 2250)
 #define BLINK_5 blink({200, 150, 200, 150, 200, 150, 200, 150, 200, 1000}, 2600)
 
+#define RUN(func, duration, during, after)             \
+	{                                                  \
+		float t1 = osKernelGetTickCount();             \
+		while (osKernelGetTickCount() - t1 < duration) \
+		{                                              \
+			func(during);                              \
+			osDelay(10);                               \
+		}                                              \
+		func(after);                                   \
+	}
+
 #define OFF_POWER 0.0
 #define LOW_POWER 0.05
 #define MEDIUM_POWER 0.2

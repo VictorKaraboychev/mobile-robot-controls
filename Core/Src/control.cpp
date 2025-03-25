@@ -190,7 +190,11 @@ void StartFusionTask(void *argument)
 	}
 }
 
+RobotMode state = RobotMode::ROBOT_MODE_DISABLED;
+RobotFunction commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
+
 // PID turnPID(0.5f, 0.01f, 0.0f, -0.2f, 0.2f, -0.2f, 0.2f);
+
 PID distancePID(0.75f, 0.01f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
 Servo servo1(&htim12, TIM_CHANNEL_2, 270, 0);
@@ -240,7 +244,7 @@ void StartLeftMotorTask(void *argument)
 		encoders_data.left.position = motor3.getPosition() * WHEEL_RADIUS;
 		encoders_data.left.velocity = motor3.getVelocity() * WHEEL_RADIUS;
 		encoders_data.left.data_ready = true;
-		encoders_data.left.active = motor3.getStatus() == DDSM400_FAULT::NONE;
+		encoders_data.left.active = motor3.getStatus() == DDSM400_FAULT::DDSM400_NONE;
 
 		osDelayUntil(last_time + 25); // 40 Hz
 	}
@@ -279,7 +283,7 @@ void StartRightMotorTask(void *argument)
 		encoders_data.right.position = -motor4.getPosition() * WHEEL_RADIUS;
 		encoders_data.right.velocity = -motor4.getVelocity() * WHEEL_RADIUS;
 		encoders_data.right.data_ready = true;
-		encoders_data.right.active = motor4.getStatus() == DDSM400_FAULT::NONE;
+		encoders_data.right.active = motor4.getStatus() == DDSM400_FAULT::DDSM400_NONE;
 
 		osDelayUntil(last_time + 25); // 40 Hz
 	}
@@ -287,26 +291,32 @@ void StartRightMotorTask(void *argument)
 
 void pickup()
 {
-	servo1.setAngle(228);
+	printf("Picking up the tape...\n");
+
+	servo1.setAngle(SERVO_PICKUP_ANGLE);
 
 	osDelay(750); // Pick up the tape with the servo
 
-	servo1.setAngle(40);
+	servo1.setAngle(SERVO_DEFAULT_ANGLE);
 }
 
 void dropoff()
 {
-	servo1.setAngle(200);
+	printf("Dropping off the tape...\n");
+
+	servo1.setAngle(SERVO_DROPOFF_ANGLE);
 	relay.on();
 
 	osDelay(1500); // Cut the tape with the relay
 
 	relay.off();
-	servo1.setAngle(40);
+	servo1.setAngle(SERVO_DEFAULT_ANGLE);
 }
 
 void enable()
 {
+	printf("Enabling the robot...\n");
+
 	// Enable the motors
 	motor1.enable();
 	motor2.enable();
@@ -314,46 +324,45 @@ void enable()
 	motor4.enable();
 
 	// Set servo to initial position
-	servo1.setAngle(135);
+	servo1.setAngle(SERVO_DEFAULT_ANGLE);
+
+	RUN(setBuzzer, 750, MEDIUM_POWER * SLOW_BLINK, OFF_POWER);
 }
 
 void disable()
 {
+	printf("Disabling the robot...\n");
+
 	// Disable the motors
 	motor1.disable();
 	motor2.disable();
 	motor3.disable();
 	motor4.disable();
 
+	// Stop the robot
+	left_velocity = 0.0f;
+	right_velocity = 0.0f;
+
 	// Reset the servo and relay
-	servo1.setAngle(40);
+	servo1.setAngle(SERVO_STORAGE_ANGLE);
 	relay.off();
 
-	float t1 = osKernelGetTickCount();
-
-	while (osKernelGetTickCount() - t1 < 1550)
-	{
-		setBuzzer(MEDIUM_POWER * BLINK_2);
-		osDelay(10);
-	}
-	setBuzzer(OFF_POWER);
+	RUN(setBuzzer, 1550, MEDIUM_POWER * BLINK_2, OFF_POWER);
 }
 
-bool state = false;
 Eigen::Vector2f target{0, 0};
 
 void StartControlTask(void *argument)
 {
-	// Gyro calibration takes 5 seconds, wait for it to finish
-	osDelay(6000);
-
 	// Servo Initialization
-	servo1.init(40);
+	servo1.init(SERVO_STORAGE_ANGLE);
 
 	// Relay Initialization
 	relay.init();
+	relay.off();
 
-	bool last_state = false;
+	// Gyro calibration takes 5 seconds, wait for it to finish
+	osDelay(6000);
 
 	float initial_time = osKernelGetTickCount() / 1000.0f;
 	uint32_t last_time = osKernelGetTickCount();
@@ -363,33 +372,66 @@ void StartControlTask(void *argument)
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
 
-		if (!state)
+		// Update the robot state
+		switch (commanded_function)
 		{
+		case RobotFunction::ROBOT_FUNCTION_ENABLE:
+		{
+			if (state == RobotMode::ROBOT_MODE_DISABLED) // If the robot is disabled
+			{
+				state = RobotMode::ROBOT_MODE_ENABLING_TRANSITION;
+				enable();
+				state = RobotMode::ROBOT_MODE_ENABLED;
+			}
+			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
+		}
+		break;
+		case RobotFunction::ROBOT_FUNCTION_DISABLE:
+		{
+			if (state != RobotMode::ROBOT_MODE_DISABLED) // If the robot is not disabled
+			{
+				state = RobotMode::ROBOT_MODE_DISABLING_TRANSITION;
+				disable();
+				state = RobotMode::ROBOT_MODE_DISABLED;
+			}
+			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
+		}
+		break;
+		case RobotFunction::ROBOT_FUNCTION_PICKUP:
+		{
+			if (state == RobotMode::ROBOT_MODE_ENABLED) // If the robot is enabled
+			{
+				state = RobotMode::ROBOT_MODE_PICKUP_TRANSITION;
+				pickup();
+				state = RobotMode::ROBOT_MODE_ENABLED;
+			}
+			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
+		}
+		break;
+		case RobotFunction::ROBOT_FUNCTION_DROPOFF:
+		{
+			if (state == RobotMode::ROBOT_MODE_ENABLED) // If the robot is enabled
+			{
+				state = RobotMode::ROBOT_MODE_DROPOFF_TRANSITION;
+				dropoff();
+				state = RobotMode::ROBOT_MODE_ENABLED;
+			}
+			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
+		}
+		break;
+		}
+
+		if (state == RobotMode::ROBOT_MODE_DISABLED)
+		{
+			// Stop the robot
 			left_velocity = 0.0f;
 			right_velocity = 0.0f;
 
-			setBuzzer(0.0f);
-
-			if (last_state) // Transition from enabled to disabled
-			{
-				disable();
-
-				last_state = false;
-			}
+			// Reset the initial time
+			initial_time = osKernelGetTickCount() / 1000.0f;
 
 			osDelayUntil(last_time + 10); // 100 Hz
 			continue;
-		}
-		else
-		{
-			if (!last_state) // Transition from disabled to enabled
-			{
-				initial_time = osKernelGetTickCount() / 1000.0f;
-
-				enable();
-
-				last_state = true;
-			}
 		}
 
 		Eigen::Vector2f position = robot.position.head<2>();
@@ -424,7 +466,7 @@ void StartControlTask(void *argument)
 		}
 
 		// If the distance is less than the threshold, stop
-		float threshold = 0.05f;
+		float threshold = 0.02f;
 		if (distance_to_target < threshold)
 		{
 			left_velocity = 0.0f;
@@ -436,16 +478,28 @@ void StartControlTask(void *argument)
 }
 
 // I2C Communication
-uint8_t rx_count = 0;
-uint8_t rx_count_max = 0;
-uint8_t rx[256];
+uint8_t _rx_count = 0;
+uint8_t _rx[256] = {0};
 
-void Process_Data()
+uint8_t _tx_count = 0;
+uint8_t _tx[256] = {0};
+
+void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 {
-	uint8_t command = rx[0];
+	// printf("Command: 0x%02X\n", command);
+
+	// Print the received data
+	printf("Received: [ ");
+	for (uint8_t i = 0; i < rx_count + 2; i++)
+	{
+		printf("0x%02X ", rx[i - 2]);
+	}
+	printf("]\n");
 
 	switch (command)
 	{
+		// TRANSMITTING DATA
+
 	case 0x01: // Done the path
 	{
 	}
@@ -455,28 +509,24 @@ void Process_Data()
 		target = robot.position.head<2>();
 	}
 	break;
-	case 0x05: // Enabled and ready to start
+	case 0x05: // Set robot state
 	{
-		state = true;
+		commanded_function = (RobotFunction)rx[0];
 	}
 	break;
-	case 0x06: // Disabled
-	{
-		state = false;
-	}
 	case 0x10: // New target position
 	{
 		// Next 4 bytes are the float value in IEEE 754 format
 		float dx = 0;
-		memcpy(&dx, &rx[1], 4);
+		memcpy(&dx, &rx[0], 4);
 
 		// Next 4 bytes are the float value in IEEE 754 format
 		float dy = 0;
-		memcpy(&dy, &rx[5], 4);
+		memcpy(&dy, &rx[4], 4);
 
 		// Next 4 bytes are the float value in IEEE 754 format
 		float theta = 0;
-		memcpy(&theta, &rx[9], 4);
+		memcpy(&theta, &rx[8], 4);
 
 		float R = 0.04f;
 		float D = 0.15f;
@@ -494,15 +544,67 @@ void Process_Data()
 		// printf("Command: %.4f %.4f %.4f\n", target_position[0], target_position[1], theta);
 	}
 	break;
-	case 0x11: // Pickup
+
+		// REQUESTING DATA
+
+	case 0x81: // Request robot position
 	{
-		pickup();
+		printf("Requesting robot position\n");
+
+		// X position
+		float x = robot.position[0];
+		memcpy(&_tx[0], &x, 4);
+
+		// Y position
+		float y = robot.position[1];
+		memcpy(&_tx[4], &y, 4);
+
+		// Z position
+		float t = robot.orientation[2];
+		memcpy(&_tx[8], &t, 4);
 	}
 	break;
-	case 0x12: // Dropoff
+	case 0x82: // Request robot velocity
 	{
-		dropoff();
+		printf("Requesting robot velocity\n");
+
+		// X velocity
+		float x = robot.velocity[0];
+		memcpy(&_tx[0], &x, 4);
+
+		// Y velocity
+		float y = robot.velocity[1];
+		memcpy(&_tx[4], &y, 4);
+
+		// Z velocity
+		float t = robot.angular_velocity[2];
+		memcpy(&_tx[8], &t, 4);
 	}
+	break;
+	case 0x83: // Request robot acceleration
+	{
+		printf("Requesting robot acceleration\n");
+
+		// X acceleration
+		float x = robot.acceleration[0];
+		memcpy(&_tx[0], &x, 4);
+
+		// Y acceleration
+		float y = robot.acceleration[1];
+		memcpy(&_tx[4], &y, 4);
+
+		// Z acceleration
+		float t = robot.acceleration[2];
+		memcpy(&_tx[8], &t, 4);
+	}
+	break;
+	case 0x85: // Request robot state
+	{
+		printf("Requesting robot state\n");
+
+		_tx[0] = state;
+	}
+	break;
 	default:
 		break;
 	}
@@ -517,14 +619,19 @@ void I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, uint16
 {
 	if (TransferDirection == I2C_DIRECTION_TRANSMIT) // if the master wants to transmit the data
 	{
-		rx_count = 0;
+		printf("Transmitting data\n");
+		_rx_count = 0;
 
-		// receive using sequential function.
-		HAL_I2C_Slave_Sequential_Receive_IT(hi2c, &rx_count_max, 1, I2C_FIRST_FRAME);
+		// Receive using sequential function.
+		HAL_I2C_Slave_Seq_Receive_IT(hi2c, _rx + _rx_count, 1, I2C_FIRST_FRAME);
 	}
 	else if (TransferDirection == I2C_DIRECTION_RECEIVE) // if the master wants to receive the data
 	{
-		rx_count = 0;
+		printf("Receiving data\n");
+		_tx_count = 0;
+
+		// Transmit using sequential function.
+		HAL_I2C_Slave_Seq_Transmit_IT(hi2c, _tx + _tx_count, 1, I2C_FIRST_FRAME);
 	}
 	else
 	{
@@ -534,24 +641,35 @@ void I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, uint16
 
 void I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *hi2c)
 {
-	rx_count++;
+	printf("Received: 0x%02X\n", _rx[_rx_count]);
 
-	if (rx_count < rx_count_max) // If there are more bytes to receive
+	uint8_t read = _rx[0] >> 7;
+	uint8_t rx_count_max = _rx[1] + 1;
+
+	if (!read && (_rx_count == 0 || _rx_count < rx_count_max)) // If there are more bytes to receive
 	{
-		if (rx_count == rx_count_max - 1)
+		if (_rx_count == rx_count_max - 1)
 		{
-			HAL_I2C_Slave_Sequential_Receive_IT(hi2c, rx + rx_count - 1, 1, I2C_LAST_FRAME);
+			HAL_I2C_Slave_Seq_Receive_IT(hi2c, _rx + _rx_count + 1, 1, I2C_LAST_FRAME);
 		}
 		else
 		{
-			HAL_I2C_Slave_Sequential_Receive_IT(hi2c, rx + rx_count - 1, 1, I2C_NEXT_FRAME);
+			HAL_I2C_Slave_Seq_Receive_IT(hi2c, _rx + _rx_count + 1, 1, I2C_NEXT_FRAME);
 		}
 	}
-
-	if (rx_count == rx_count_max) // If all the bytes have been received
+	else // If all the bytes have been received
 	{
-		Process_Data();
+		Process_RX_Data(_rx[0], _rx + 2, _rx[1]);
 	}
+
+	_rx_count++;
+}
+
+void I2C_SlaveTxCpltCallback(I2C_HandleTypeDef *hi2c)
+{
+	HAL_I2C_Slave_Seq_Transmit_IT(hi2c, _tx + _tx_count, 1, I2C_NEXT_FRAME);
+
+	_tx_count++;
 }
 
 void StartCommTask(void *argument)
@@ -561,6 +679,7 @@ void StartCommTask(void *argument)
 	hi2c1.ListenCpltCallback = I2C_ListenCpltCallback;
 	hi2c1.AddrCallback = I2C_AddrCallback;
 	hi2c1.SlaveRxCpltCallback = I2C_SlaveRxCpltCallback;
+	hi2c1.SlaveTxCpltCallback = I2C_SlaveTxCpltCallback;
 
 	HAL_I2C_EnableListen_IT(&hi2c1);
 

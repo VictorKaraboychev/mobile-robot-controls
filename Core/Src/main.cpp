@@ -36,7 +36,6 @@
 /* USER CODE BEGIN Includes */
 
 #include <stdio.h>
-#include "usbd_cdc_if.h"
 
 /* USER CODE END Includes */
 
@@ -73,20 +72,18 @@ void MX_FREERTOS_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-extern osMutexId_t usbMutexHandle;
+extern uint8_t usb_tx_length;
+extern uint8_t usb_tx_buffer[256];
 
 int _write(int file, char *ptr, int length)
 {
   (void)file;
 
-  // Wait for the USB mutex
-  osMutexAcquire(usbMutexHandle, osWaitForever);
-
   // Transmit the data
-  CDC_Transmit_FS((uint8_t *)ptr, length);
-
-  // Release the USB mutex
-  osMutexRelease(usbMutexHandle);
+  for (int i = 0; i < length; i++)
+  {
+    usb_tx_buffer[usb_tx_length++] = ptr[i];
+  }
 
   return length;
 }
@@ -148,8 +145,6 @@ int main(void)
   MX_UART7_Init();
   MX_SPI1_Init();
   /* USER CODE BEGIN 2 */
-
-  MX_USB_DEVICE_Init();
 
   /* USER CODE END 2 */
 

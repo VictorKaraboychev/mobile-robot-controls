@@ -29,6 +29,13 @@ public:
 		// Initialize the servo timer
 		HAL_TIM_PWM_Start(this->htim, this->channel);
 
+		// Calculate the pulse width
+		uint32_t pulse_width = min_pulse_width + (max_pulse_width - min_pulse_width) * (initial_angle / max_angle);
+
+		// Set the pulse width
+		uint32_t ticks = pulse_width / MICROSECONDS_PER_TICK;
+		__HAL_TIM_SetCompare(this->htim, this->channel, ticks);
+
 		// Set the initial angle
 		this->angle = initial_angle;
 	}

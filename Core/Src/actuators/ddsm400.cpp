@@ -114,8 +114,8 @@ DDSM400::DDSM400(UART_HandleTypeDef *huart, osMutexId_t *muart)
 	this->huart = huart;
 	this->muart = muart;
 
-	this->mode = DDSM400_MODE::DISABLED;
-	this->status = DDSM400_FAULT::NONE;
+	this->mode = DDSM400_MODE::DDSM400_DISABLED;
+	this->status = DDSM400_FAULT::DDSM400_NONE;
 }
 
 DDSM400::~DDSM400()
@@ -157,19 +157,19 @@ DDSM400_MODE DDSM400::getMode()
 
 void DDSM400::enable()
 {
-	this->setMode(DDSM400_MODE::ENABLED);
+	this->setMode(DDSM400_MODE::DDSM400_ENABLED);
 }
 
 void DDSM400::disable()
 {
-	this->setMode(DDSM400_MODE::DISABLED);
+	this->setMode(DDSM400_MODE::DDSM400_DISABLED);
 }
 
 void DDSM400::setVelocity(float velocity, float acceleration, bool brake)
 {
-	if (this->mode != DDSM400_MODE::SPEED)
+	if (this->mode != DDSM400_MODE::DDSM400_SPEED)
 	{
-		this->setMode(DDSM400_MODE::SPEED);
+		this->setMode(DDSM400_MODE::DDSM400_SPEED);
 	}
 
 	uint8_t tx[8] = {0x64, 0, 0, 0, 0, 0, 0, 0};
@@ -223,9 +223,9 @@ float DDSM400::getVelocity() const
 
 void DDSM400::setPosition(float position)
 {
-	if (this->mode != DDSM400_MODE::POSITION)
+	if (this->mode != DDSM400_MODE::DDSM400_POSITION)
 	{
-		this->setMode(DDSM400_MODE::POSITION);
+		this->setMode(DDSM400_MODE::DDSM400_POSITION);
 	}
 
 	uint8_t tx[8] = {0x64, 0, 0, 0, 0, 0, 0, 0};
@@ -284,9 +284,9 @@ float DDSM400::getPosition()
 
 void DDSM400::setCurrent(float current)
 {
-	if (this->mode != DDSM400_MODE::CURRENT)
+	if (this->mode != DDSM400_MODE::DDSM400_CURRENT)
 	{
-		this->setMode(DDSM400_MODE::CURRENT);
+		this->setMode(DDSM400_MODE::DDSM400_CURRENT);
 	}
 
 	uint8_t tx[8] = {0x64, 0, 0, 0, 0, 0, 0, 0};
