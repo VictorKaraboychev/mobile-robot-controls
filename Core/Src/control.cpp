@@ -305,6 +305,37 @@ void dropoff()
 	servo1.setAngle(40);
 }
 
+void enable()
+{
+	// Enable the motors
+	motor1.enable();
+	motor2.enable();
+	motor3.enable();
+	motor4.enable();
+}
+
+void disable()
+{
+	// Disable the motors
+	motor1.disable();
+	motor2.disable();
+	motor3.disable();
+	motor4.disable();
+
+	// Reset the servo and relay
+	servo1.setAngle(40);
+	relay.off();
+
+	float t1 = osKernelGetTickCount();
+
+	while (osKernelGetTickCount() - t1 < 1550)
+	{
+		setBuzzer(MEDIUM_POWER * BLINK_2);
+		osDelay(10);
+	}
+	setBuzzer(OFF_POWER);
+}
+
 bool state = false;
 Eigen::Vector2f target{0, 0};
 
@@ -338,24 +369,7 @@ void StartControlTask(void *argument)
 
 			if (last_state) // Transition from enabled to disabled
 			{
-				// Disable the motors
-				motor1.disable();
-				motor2.disable();
-				motor3.disable();
-				motor4.disable();
-
-				// Reset the servo and relay
-				servo1.setAngle(40);
-				relay.off();
-
-				float t1 = osKernelGetTickCount();
-
-				while (osKernelGetTickCount() - t1 < 1550)
-				{
-					setBuzzer(MEDIUM_POWER * BLINK_2);
-					osDelay(10);
-				}
-				setBuzzer(OFF_POWER);
+				disable();
 
 				last_state = false;
 			}
@@ -369,11 +383,7 @@ void StartControlTask(void *argument)
 			{
 				initial_time = osKernelGetTickCount() / 1000.0f;
 
-				// Enable the motors
-				motor1.enable();
-				motor2.enable();
-				motor3.enable();
-				motor4.enable();
+				enable();
 
 				last_state = true;
 			}
