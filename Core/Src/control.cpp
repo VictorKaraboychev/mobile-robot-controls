@@ -360,8 +360,263 @@ void disable()
 	RUN(setBuzzer, 1550, MEDIUM_POWER * BLINK_2, OFF_POWER);
 }
 
-Eigen::Vector2f target{0, 0};
-float curvature = 0.0f;
+struct Point
+{
+	float x;
+	float y;
+};
+
+#include <vector>
+
+std::vector<std::pair<float, float>> path = {
+	{0, 0},
+	{0, 0.025},
+	{0, 0.05},
+	{0, 0.075},
+	{0, 0.1},
+	{0, 0.125},
+	{0, 0.15},
+	{0, 0.175},
+	{0, 0.2},
+	{0, 0.225},
+	{0, 0.25},
+	{0, 0.275},
+	{0, 0.3},
+	{0, 0.325},
+	{0, 0.35},
+	{0, 0.375},
+	{0, 0.4},
+	{0, 0.425},
+	{0, 0.45},
+	{0, 0.475},
+	{0, 0.5},
+	{0, 0.525},
+	{0, 0.55},
+	{0, 0.575},
+	{0, 0.6},
+	{0, 0.625},
+	{0, 0.65},
+	{0, 0.675},
+	{0, 0.7},
+	{0, 0.725},
+	{0, 0.75},
+	{0, 0.775},
+	{0, 0.8},
+	{0, 0.825},
+	{0, 0.85},
+	{0, 0.875},
+	{0, 0.9},
+	{0, 0.925},
+	{0, 0.95},
+	{0, 0.975},
+	{0, 1},
+	{0, 1.025},
+	{0, 1.05},
+	{0, 1.075},
+	{0, 1.1},
+	{0, 1.125},
+	{0, 1.15},
+	{0, 1.175},
+	{0, 1.2},
+	{0, 1.225},
+	{0, 1.25},
+	{0, 1.275},
+	{0, 1.3},
+	{0, 1.325},
+	{0, 1.35},
+	{0.0018, 1.3735},
+	{0.0073, 1.3964},
+	{0.0163, 1.4181},
+	{0.0286, 1.4382},
+	{0.0439, 1.4561},
+	{0.0618, 1.4714},
+	{0.0819, 1.4837},
+	{0.1036, 1.4927},
+	{0.1265, 1.4982},
+	{0.15, 1.5},
+	{0.175, 1.5},
+	{0.2, 1.5},
+	{0.225, 1.5},
+	{0.25, 1.5},
+	{0.275, 1.5},
+	{0.3, 1.5},
+	{0.325, 1.5},
+	{0.35, 1.5},
+	{0.375, 1.5},
+	{0.4, 1.5},
+	{0.425, 1.5},
+	{0.45, 1.5},
+	{0.475, 1.5},
+	{0.5, 1.5},
+	{0.525, 1.5},
+	{0.55, 1.5},
+	{0.575, 1.5},
+	{0.6, 1.5},
+	{0.625, 1.5},
+	{0.65, 1.5},
+	{0.675, 1.5},
+	{0.7, 1.5},
+	{0.725, 1.5},
+	{0.75, 1.5},
+	{0.775, 1.5},
+	{0.8, 1.5},
+	{0.825, 1.5},
+	{0.85, 1.5},
+	{0.875, 1.5},
+	{0.9, 1.5},
+	{0.925, 1.5},
+	{0.95, 1.5},
+	{0.975, 1.5},
+	{1, 1.5},
+	{1.025, 1.5},
+	{1.05, 1.5},
+	{1.075, 1.5},
+	{1.1, 1.5},
+	{1.125, 1.5},
+	{1.15, 1.5},
+	{1.175, 1.5},
+	{1.2, 1.5},
+	{1.225, 1.5},
+	{1.25, 1.5},
+	{1.275, 1.5},
+	{1.3, 1.5},
+	{1.325, 1.5},
+	{1.35, 1.5},
+	{1.3735, 1.4982},
+	{1.3964, 1.4927},
+	{1.4181, 1.4837},
+	{1.4382, 1.4714},
+	{1.4561, 1.4561},
+	{1.4714, 1.4382},
+	{1.4837, 1.4181},
+	{1.4927, 1.3964},
+	{1.4982, 1.3735},
+	{1.5, 1.35},
+	{1.4982, 1.3265},
+	{1.4927, 1.3036},
+	{1.4837, 1.2819},
+	{1.4714, 1.2618},
+	{1.4561, 1.2439},
+	{1.4382, 1.2286},
+	{1.4181, 1.2163},
+	{1.3964, 1.2073},
+	{1.3735, 1.2018},
+	{1.35, 1.2},
+	{1.3265, 1.1982},
+	{1.3036, 1.1927},
+	{1.2819, 1.1837},
+	{1.2618, 1.1714},
+	{1.2439, 1.1561},
+	{1.2286, 1.1382},
+	{1.2163, 1.1181},
+	{1.2073, 1.0964},
+	{1.2018, 1.0735},
+	{1.2, 1.05},
+	{1.2018, 1.0265},
+	{1.2073, 1.0036},
+	{1.2163, 0.9819},
+	{1.2286, 0.9618},
+	{1.2439, 0.9439},
+	{1.2618, 0.9286},
+	{1.2819, 0.9163},
+	{1.3036, 0.9073},
+	{1.3265, 0.9018},
+	{1.35, 0.9},
+	{1.3735, 0.8982},
+	{1.3964, 0.8927},
+	{1.4181, 0.8837},
+	{1.4382, 0.8714},
+	{1.4561, 0.8561},
+	{1.4714, 0.8382},
+	{1.4837, 0.8181},
+	{1.4927, 0.7964},
+	{1.4982, 0.7735},
+	{1.5, 0.75},
+	{1.5, 0.725},
+	{1.5, 0.7},
+	{1.5, 0.675},
+	{1.5, 0.65},
+	{1.5, 0.625},
+	{1.5, 0.6},
+	{1.5, 0.575},
+	{1.5, 0.55},
+	{1.5, 0.525},
+	{1.5, 0.5},
+	{1.5, 0.475},
+	{1.5, 0.45},
+	{1.5, 0.425},
+	{1.5, 0.4},
+	{1.5, 0.375},
+	{1.5, 0.35},
+	{1.5, 0.325},
+	{1.5, 0.3},
+	{1.5, 0.275},
+	{1.5, 0.25},
+	{1.5, 0.225},
+	{1.5, 0.2},
+	{1.5, 0.175},
+	{1.5, 0.15},
+	{1.4982, 0.1265},
+	{1.4927, 0.1036},
+	{1.4837, 0.0819},
+	{1.4714, 0.0618},
+	{1.4561, 0.0439},
+	{1.4382, 0.0286},
+	{1.4181, 0.0163},
+	{1.3964, 0.0073},
+	{1.3735, 0.0018},
+	{1.35, 0},
+	{1.325, 0},
+	{1.3, 0},
+	{1.275, 0},
+	{1.25, 0},
+	{1.225, 0},
+	{1.2, 0},
+	{1.175, 0},
+	{1.15, 0},
+	{1.125, 0},
+	{1.1, 0},
+	{1.075, 0},
+	{1.05, 0},
+	{1.0265, 0.0018},
+	{1.0036, 0.0073},
+	{0.9819, 0.0163},
+	{0.9618, 0.0286},
+	{0.9439, 0.0439},
+	{0.9286, 0.0618},
+	{0.9163, 0.0819},
+	{0.9073, 0.1036},
+	{0.9018, 0.1265},
+	{0.9, 0.15},
+	{0.9, 0.175},
+	{0.9, 0.2},
+	{0.9, 0.225},
+	{0.9, 0.25},
+	{0.9, 0.275},
+	{0.9, 0.3},
+	{0.9, 0.325},
+	{0.9, 0.35},
+	{0.9, 0.375},
+	{0.9, 0.4},
+	{0.9, 0.425},
+	{0.9, 0.45},
+	{0.8982, 0.4735},
+	{0.8927, 0.4964},
+	{0.8837, 0.5181},
+	{0.8714, 0.5382},
+	{0.8561, 0.5561},
+	{0.8382, 0.5714},
+	{0.8181, 0.5837},
+	{0.7964, 0.5927},
+	{0.7735, 0.5982},
+	{0.75, 0.6},
+	{0.725, 0.6},
+	{0.7, 0.6},
+	{0.675, 0.6},
+	{0.65, 0.6},
+	{0.625, 0.6},
+	{0.6, 0.6},
+};
 
 void StartControlTask(void *argument)
 {
@@ -373,10 +628,15 @@ void StartControlTask(void *argument)
 	relay.off();
 
 	// Gyro calibration takes 5 seconds, wait for it to finish
-	osDelay(6000);
+	osDelay(10000);
+
+	// Enable the robot
+	commanded_function = RobotFunction::ROBOT_FUNCTION_ENABLE;
 
 	float initial_time = osKernelGetTickCount() / 1000.0f;
 	uint32_t last_time = osKernelGetTickCount();
+
+	uint16_t path_index = 0;
 
 	while (true)
 	{
@@ -447,9 +707,12 @@ void StartControlTask(void *argument)
 
 		Eigen::Vector2f position = robot.position.head<2>();
 
+		// Get the target position
+		Eigen::Vector2f target{path[path_index].first, path[path_index].second};
+
 		// Calculate the euclidean distance to the target
 		float distance_to_target = (target - position).norm();
-		// float angle_to_target = atan2f(target[1] - position[1], target[0] - position[0]);
+		float angle_to_target = atan2f(target[1] - position[1], target[0] - position[0]);
 
 		float target_speed = distancePID.update(distance_to_target, 0, delta_time);
 
@@ -460,8 +723,7 @@ void StartControlTask(void *argument)
 		// }
 
 		// Calculate the curvature
-		// float curvature_coefficient = 1.125f;
-		// float curvature = curvature_coefficient * PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
+		float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
 
 		// Calculate the left and right wheel velocities
 		left_velocity = target_speed * (1 - curvature * WHEEL_DISTANCE / 2.0f);
@@ -477,12 +739,20 @@ void StartControlTask(void *argument)
 			right_velocity *= MAX_SPEED / max_velocity;
 		}
 
-		// If the distance is less than the threshold, stop
-		float threshold = 0.05f;
-		if (distance_to_target < threshold)
+		// If the robot is close to the target, move to the next target
+		float distance_threshold = 0.04f;
+		if (distance_to_target < distance_threshold)
 		{
-			left_velocity = 0.0f;
-			right_velocity = 0.0f;
+			if (path_index == path.size() - 1)
+			{
+				// Stop the robot
+				left_velocity = 0.0f;
+				right_velocity = 0.0f;
+			}
+			else
+			{
+				path_index = (path_index + 1) % path.size();
+			}
 		}
 
 		osDelayUntil(last_time + 10); // 100 Hz
@@ -542,8 +812,7 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 		Eigen::Vector2f robot_position{robot.position[0], robot.position[1]};
 		Eigen::Vector2f camera_target_position{dx + O, R * dy + D};
 
-		target = robot_position + rotation * camera_target_position;
-		curvature = 20.0 * atan2f(camera_target_position[0], camera_target_position[1]);
+		// target = robot_position + rotation * camera_target_position;
 
 		// printf("Command: %.4f %.4f %.4f\n", target_position[0], target_position[1], theta);
 	}
@@ -613,8 +882,8 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 	{
 		printf("Requesting target point\n");
 
-		memcpy(&_tx[0], &target[0], 4);
-		memcpy(&_tx[4], &target[1], 4);
+		// memcpy(&_tx[0], &target[0], 4);
+		// memcpy(&_tx[4], &target[1], 4);
 	}
 	default:
 		break;
