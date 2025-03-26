@@ -195,7 +195,7 @@ RobotFunction commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
 
 // PID turnPID(0.5f, 0.01f, 0.0f, -0.2f, 0.2f, -0.2f, 0.2f);
 
-PID distancePID(0.75f, 0.01f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f);
+PID distancePID(1.0f, 0.02f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
 Servo servo1(&htim12, TIM_CHANNEL_2, 270, 0);
 PWM relay(&htim12, TIM_CHANNEL_1);
@@ -209,7 +209,6 @@ DDSM400 motor3(&huart4, &uart4MutexHandle); // Rear left
 DDSM400 motor4(&huart7, &uart7MutexHandle); // Rear right
 
 volatile float left_velocity = 0;
-volatile float right_velocity = 0;
 
 void StartLeftMotorTask(void *argument)
 {
@@ -234,21 +233,26 @@ void StartLeftMotorTask(void *argument)
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
 
-		float left_rotational_velocity = left_velocity / WHEEL_RADIUS;
+		if (motor1.getMode() != DDSM400_MODE::DDSM400_DISABLED && motor3.getMode() != DDSM400_MODE::DDSM400_DISABLED)
+		{
+			float left_rotational_velocity = left_velocity / WHEEL_RADIUS;
 
-		// Set the motor velocity
-		motor1.setVelocity(left_rotational_velocity);
-		motor3.setVelocity(left_rotational_velocity);
+			// Set the motor velocity
+			motor1.setVelocity(left_rotational_velocity);
+			motor3.setVelocity(left_rotational_velocity);
 
-		// Update the encoders data
-		encoders_data.left.position = motor3.getPosition() * WHEEL_RADIUS;
-		encoders_data.left.velocity = motor3.getVelocity() * WHEEL_RADIUS;
-		encoders_data.left.data_ready = true;
-		encoders_data.left.active = motor3.getStatus() == DDSM400_FAULT::DDSM400_NONE;
+			// Update the encoders data
+			encoders_data.left.position = motor3.getPosition() * WHEEL_RADIUS;
+			encoders_data.left.velocity = motor3.getVelocity() * WHEEL_RADIUS;
+			encoders_data.left.data_ready = true;
+			encoders_data.left.active = motor3.getStatus() == DDSM400_FAULT::DDSM400_NONE;
+		}
 
 		osDelayUntil(last_time + 25); // 40 Hz
 	}
 }
+
+volatile float right_velocity = 0;
 
 void StartRightMotorTask(void *argument)
 {
@@ -273,17 +277,20 @@ void StartRightMotorTask(void *argument)
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
 
-		float right_rotational_velocity = right_velocity / WHEEL_RADIUS;
+		if (motor2.getMode() != DDSM400_MODE::DDSM400_DISABLED && motor4.getMode() != DDSM400_MODE::DDSM400_DISABLED)
+		{
+			float right_rotational_velocity = right_velocity / WHEEL_RADIUS;
 
-		// Set the motor velocity
-		motor2.setVelocity(-right_rotational_velocity);
-		motor4.setVelocity(-right_rotational_velocity);
+			// Set the motor velocity
+			motor2.setVelocity(-right_rotational_velocity);
+			motor4.setVelocity(-right_rotational_velocity);
 
-		// Update the encoders data
-		encoders_data.right.position = -motor4.getPosition() * WHEEL_RADIUS;
-		encoders_data.right.velocity = -motor4.getVelocity() * WHEEL_RADIUS;
-		encoders_data.right.data_ready = true;
-		encoders_data.right.active = motor4.getStatus() == DDSM400_FAULT::DDSM400_NONE;
+			// Update the encoders data
+			encoders_data.right.position = -motor4.getPosition() * WHEEL_RADIUS;
+			encoders_data.right.velocity = -motor4.getVelocity() * WHEEL_RADIUS;
+			encoders_data.right.data_ready = true;
+			encoders_data.right.active = motor4.getStatus() == DDSM400_FAULT::DDSM400_NONE;
+		}
 
 		osDelayUntil(last_time + 25); // 40 Hz
 	}
@@ -317,6 +324,9 @@ void enable()
 {
 	printf("Enabling the robot...\n");
 
+	// Reset the robot state
+	ekf.reset();
+
 	// Enable the motors
 	motor1.enable();
 	motor2.enable();
@@ -333,15 +343,15 @@ void disable()
 {
 	printf("Disabling the robot...\n");
 
+	// Stop the robot
+	left_velocity = 0.0f;
+	right_velocity = 0.0f;
+
 	// Disable the motors
 	motor1.disable();
 	motor2.disable();
 	motor3.disable();
 	motor4.disable();
-
-	// Stop the robot
-	left_velocity = 0.0f;
-	right_velocity = 0.0f;
 
 	// Reset the servo and relay
 	servo1.setAngle(SERVO_STORAGE_ANGLE);
@@ -351,6 +361,7 @@ void disable()
 }
 
 Eigen::Vector2f target{0, 0};
+float curvature = 0.0f;
 
 void StartControlTask(void *argument)
 {
@@ -438,18 +449,19 @@ void StartControlTask(void *argument)
 
 		// Calculate the euclidean distance to the target
 		float distance_to_target = (target - position).norm();
-		float angle_to_target = atan2f(target[1] - position[1], target[0] - position[0]);
+		// float angle_to_target = atan2f(target[1] - position[1], target[0] - position[0]);
 
 		float target_speed = distancePID.update(distance_to_target, 0, delta_time);
 
-		// If target is behind the robot, reverse
-		if (angle_to_target < 0)
-		{
-			target_speed *= -1;
-		}
+		// // If target is behind the robot, reverse
+		// if (angle_to_target < 0)
+		// {
+		// 	target_speed *= -1;
+		// }
 
 		// Calculate the curvature
-		float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
+		// float curvature_coefficient = 1.125f;
+		// float curvature = curvature_coefficient * PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
 
 		// Calculate the left and right wheel velocities
 		left_velocity = target_speed * (1 - curvature * WHEEL_DISTANCE / 2.0f);
@@ -466,7 +478,7 @@ void StartControlTask(void *argument)
 		}
 
 		// If the distance is less than the threshold, stop
-		float threshold = 0.02f;
+		float threshold = 0.05f;
 		if (distance_to_target < threshold)
 		{
 			left_velocity = 0.0f;
@@ -500,15 +512,6 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 	{
 		// TRANSMITTING DATA
 
-	case 0x01: // Done the path
-	{
-	}
-	break;
-	case 0x02: // No path detected
-	{
-		target = robot.position.head<2>();
-	}
-	break;
 	case 0x05: // Set robot state
 	{
 		commanded_function = (RobotFunction)rx[0];
@@ -529,8 +532,8 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 		memcpy(&theta, &rx[8], 4);
 
 		float R = 0.04f;
-		float D = 0.15f;
-		float O = 0.0f; //-0.018f;
+		float D = 0.875f;
+		float O = 0.018f;
 
 		float phi = robot.orientation[2];
 
@@ -540,6 +543,7 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 		Eigen::Vector2f camera_target_position{dx + O, R * dy + D};
 
 		target = robot_position + rotation * camera_target_position;
+		curvature = 20.0 * atan2f(camera_target_position[0], camera_target_position[1]);
 
 		// printf("Command: %.4f %.4f %.4f\n", target_position[0], target_position[1], theta);
 	}
@@ -605,6 +609,13 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 		_tx[0] = state;
 	}
 	break;
+	case 0x90: // Request target point
+	{
+		printf("Requesting target point\n");
+
+		memcpy(&_tx[0], &target[0], 4);
+		memcpy(&_tx[4], &target[1], 4);
+	}
 	default:
 		break;
 	}

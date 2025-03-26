@@ -47,6 +47,9 @@ public:
 	// Initialize the filter with a state vector and covariance matrix.
 	void initialize(const StateVector &x, const StateMatrix &P);
 
+	// Reset the filter to the initial state.
+	void reset();
+
 	// Predict step with control input.
 	void predict(const ControlVector &u);
 
@@ -77,7 +80,9 @@ private:
 
 	// Filter estimates.
 	StateVector x; // State estimate.
+	StateVector initial_x; // Initial state estimate.
 	StateMatrix P; // Covariance estimate.
+	StateMatrix initial_P; // Initial covariance estimate.
 	StateMatrix I; // Precomputed identity matrix for the state (StateDim x StateDim).
 };
 
@@ -112,6 +117,16 @@ void ExtendedKalmanFilter<DataType, StateDim, ControlDim, MeasurementDim>::initi
 {
 	this->x = x;
 	this->P = P;
+
+	this->initial_x = x;
+	this->initial_P = P;
+}
+
+template <typename DataType, int StateDim, int ControlDim, int MeasurementDim>
+void ExtendedKalmanFilter<DataType, StateDim, ControlDim, MeasurementDim>::reset()
+{
+	this->x = this->initial_x;
+	this->P = this->initial_P;
 }
 
 template <typename DataType, int StateDim, int ControlDim, int MeasurementDim>
