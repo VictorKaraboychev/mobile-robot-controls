@@ -193,8 +193,7 @@ void StartFusionTask(void *argument)
 RobotMode state = RobotMode::ROBOT_MODE_DISABLED;
 RobotFunction commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
 
-// PID turnPID(0.5f, 0.01f, 0.0f, -0.2f, 0.2f, -0.2f, 0.2f);
-
+PID turnPID(0.5f, 0.01f, 0.0f, -0.2f, 0.2f, -0.2f, 0.2f);
 PID distancePID(1.0f, 0.02f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
 Servo servo1(&htim12, TIM_CHANNEL_2, 270, 0);
@@ -618,6 +617,8 @@ std::vector<std::pair<float, float>> path = {
 	{0.6, 0.6},
 };
 
+float angle = 0.0f;
+
 void StartControlTask(void *argument)
 {
 	// Servo Initialization
@@ -628,10 +629,10 @@ void StartControlTask(void *argument)
 	relay.off();
 
 	// Gyro calibration takes 5 seconds, wait for it to finish
-	osDelay(10000);
+	osDelay(6000);
 
 	// Enable the robot
-	commanded_function = RobotFunction::ROBOT_FUNCTION_ENABLE;
+	// commanded_function = RobotFunction::ROBOT_FUNCTION_ENABLE;
 
 	float initial_time = osKernelGetTickCount() / 1000.0f;
 	uint32_t last_time = osKernelGetTickCount();
@@ -708,13 +709,15 @@ void StartControlTask(void *argument)
 		Eigen::Vector2f position = robot.position.head<2>();
 
 		// Get the target position
-		Eigen::Vector2f target{path[path_index].first, path[path_index].second};
+		// Eigen::Vector2f last_target{path[path_index - 1].first, path[path_index - 1].second};
+		// Eigen::Vector2f target{path[path_index].first, path[path_index].second};
 
 		// Calculate the euclidean distance to the target
-		float distance_to_target = (target - position).norm();
-		float angle_to_target = atan2f(target[1] - position[1], target[0] - position[0]);
+		// float distance_to_target = (target - position).norm();
+		// float angle_to_target = atan2f(target[1] - position[1], target[0] - position[0]);
 
-		float target_speed = distancePID.update(distance_to_target, 0, delta_time);
+		float target_speed = 0.1f; // distancePID.update(distance_to_target, 0, delta_time);
+		float turn_speed = turnPID.update(0, angle, delta_time);
 
 		// // If target is behind the robot, reverse
 		// if (angle_to_target < 0)
@@ -723,11 +726,11 @@ void StartControlTask(void *argument)
 		// }
 
 		// Calculate the curvature
-		float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
+		// float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
 
 		// Calculate the left and right wheel velocities
-		left_velocity = target_speed * (1 - curvature * WHEEL_DISTANCE / 2.0f);
-		right_velocity = target_speed * (1 + curvature * WHEEL_DISTANCE / 2.0f);
+		left_velocity = target_speed * (1 + turn_speed);  //(1 - curvature * WHEEL_DISTANCE / 2.0f);
+		right_velocity = target_speed * (1 - turn_speed); //(1 + curvature * WHEEL_DISTANCE / 2.0f);
 
 		// Limit the wheel velocities to the maximum speed
 		float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
@@ -740,20 +743,20 @@ void StartControlTask(void *argument)
 		}
 
 		// If the robot is close to the target, move to the next target
-		float distance_threshold = 0.04f;
-		if (distance_to_target < distance_threshold)
-		{
-			if (path_index == path.size() - 1)
-			{
-				// Stop the robot
-				left_velocity = 0.0f;
-				right_velocity = 0.0f;
-			}
-			else
-			{
-				path_index = (path_index + 1) % path.size();
-			}
-		}
+		// float distance_threshold = 0.04f;
+		// if (distance_to_target < distance_threshold)
+		// {
+		// 	if (path_index == path.size() - 1)
+		// 	{
+		// 		// Stop the robot
+		// 		left_velocity = 0.0f;
+		// 		right_velocity = 0.0f;
+		// 	}
+		// 	else
+		// 	{
+		// 		path_index = (path_index + 1) % path.size();
+		// 	}
+		// }
 
 		osDelayUntil(last_time + 10); // 100 Hz
 	}
@@ -813,6 +816,8 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 		Eigen::Vector2f camera_target_position{dx + O, R * dy + D};
 
 		// target = robot_position + rotation * camera_target_position;
+
+		angle = atan2f(camera_target_position[1], camera_target_position[0]);
 
 		// printf("Command: %.4f %.4f %.4f\n", target_position[0], target_position[1], theta);
 	}
