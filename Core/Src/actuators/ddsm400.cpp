@@ -152,7 +152,7 @@ void DDSM400::setMode(DDSM400_MODE mode)
 
 DDSM400_MODE DDSM400::getMode()
 {
-	return mode;
+	return this->mode;
 }
 
 void DDSM400::enable()

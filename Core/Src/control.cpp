@@ -206,6 +206,7 @@ DDSM400 motor3(&huart4, &uart4MutexHandle); // Rear left
 DDSM400 motor4(&huart7, &uart7MutexHandle); // Rear right
 
 volatile float left_velocity = 0;
+bool left_motor_active = false;
 
 void StartLeftMotorTask(void *argument)
 {
@@ -230,33 +231,52 @@ void StartLeftMotorTask(void *argument)
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
 
-		if (motor1.getMode() != DDSM400_MODE::DDSM400_DISABLED && motor3.getMode() != DDSM400_MODE::DDSM400_DISABLED)
+		if (left_motor_active)
 		{
+			if (motor1.getMode() == DDSM400_MODE::DDSM400_DISABLED)
+			{
+				motor1.enable();
+			}
+
+			if (motor3.getMode() == DDSM400_MODE::DDSM400_DISABLED)
+			{
+				motor3.enable();
+			}
+
 			float left_rotational_velocity = left_velocity / WHEEL_RADIUS;
 
 			// Set the motor velocity
-			if (abs(motor1.getVelocity() - left_rotational_velocity) > 0.02f)
-			{
-				motor1.setVelocity(left_rotational_velocity);
-			}
-
-			if (abs(motor3.getVelocity() - left_rotational_velocity) > 0.02f)
-			{
-				motor3.setVelocity(left_rotational_velocity);
-			}
+			motor1.setVelocity(left_rotational_velocity);
+			motor3.setVelocity(left_rotational_velocity);
 
 			// Update the encoders data
 			encoders_data.left.position = motor3.getPosition() * WHEEL_RADIUS;
 			encoders_data.left.velocity = motor3.getVelocity() * WHEEL_RADIUS;
 			encoders_data.left.data_ready = true;
-			encoders_data.left.active = motor3.getStatus() == DDSM400_FAULT::DDSM400_NONE;
 		}
+		else
+		{
+			left_velocity = 0;
+
+			if (motor1.getMode() != DDSM400_MODE::DDSM400_DISABLED)
+			{
+				motor1.disable();
+			}
+
+			if (motor3.getMode() != DDSM400_MODE::DDSM400_DISABLED)
+			{
+				motor3.disable();
+			}
+		}
+
+		encoders_data.left.active = motor3.getStatus() == DDSM400_FAULT::DDSM400_NONE;
 
 		osDelayUntil(last_time + 25); // 40 Hz
 	}
 }
 
 volatile float right_velocity = 0;
+bool right_motor_active = false;
 
 void StartRightMotorTask(void *argument)
 {
@@ -281,27 +301,45 @@ void StartRightMotorTask(void *argument)
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
 
-		if (motor2.getMode() != DDSM400_MODE::DDSM400_DISABLED && motor4.getMode() != DDSM400_MODE::DDSM400_DISABLED)
+		if (right_motor_active)
 		{
+			if (motor2.getMode() == DDSM400_MODE::DDSM400_DISABLED)
+			{
+				motor2.enable();
+			}
+
+			if (motor4.getMode() == DDSM400_MODE::DDSM400_DISABLED)
+			{
+				motor4.enable();
+			}
+
 			float right_rotational_velocity = -right_velocity / WHEEL_RADIUS;
 
 			// Set the motor velocity
-			if (abs(motor2.getVelocity() - right_rotational_velocity) > 0.02f)
-			{
-				motor2.setVelocity(right_rotational_velocity);
-			}
-
-			if (abs(motor4.getVelocity() - right_rotational_velocity) > 0.02f)
-			{
-				motor4.setVelocity(right_rotational_velocity);
-			}
+			motor2.setVelocity(right_rotational_velocity);
+			motor4.setVelocity(right_rotational_velocity);
 
 			// Update the encoders data
 			encoders_data.right.position = -motor4.getPosition() * WHEEL_RADIUS;
 			encoders_data.right.velocity = -motor4.getVelocity() * WHEEL_RADIUS;
 			encoders_data.right.data_ready = true;
-			encoders_data.right.active = motor4.getStatus() == DDSM400_FAULT::DDSM400_NONE;
 		}
+		else
+		{
+			right_velocity = 0;
+
+			if (motor2.getMode() != DDSM400_MODE::DDSM400_DISABLED)
+			{
+				motor2.disable();
+			}
+
+			if (motor4.getMode() != DDSM400_MODE::DDSM400_DISABLED)
+			{
+				motor4.disable();
+			}
+		}
+
+		encoders_data.right.active = motor4.getStatus() == DDSM400_FAULT::DDSM400_NONE;
 
 		osDelayUntil(last_time + 25); // 40 Hz
 	}
@@ -339,10 +377,8 @@ void enable()
 	ekf.reset();
 
 	// Enable the motors
-	motor1.enable();
-	motor2.enable();
-	motor3.enable();
-	motor4.enable();
+	left_motor_active = true;
+	right_motor_active = true;
 
 	// Set servo to initial position
 	servo1.setAngle(SERVO_DEFAULT_ANGLE);
@@ -354,17 +390,9 @@ void disable()
 {
 	printf("Disabling the robot...\n");
 
-	// Stop the robot
-	left_velocity = 0.0f;
-	right_velocity = 0.0f;
-
-	osDelay(500); // Wait for the robot to stop
-
 	// Disable the motors
-	motor1.disable();
-	motor2.disable();
-	motor3.disable();
-	motor4.disable();
+	left_motor_active = false;
+	right_motor_active = false;
 
 	// Reset the servo and relay
 	servo1.setAngle(SERVO_STORAGE_ANGLE);
