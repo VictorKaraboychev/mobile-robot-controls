@@ -191,8 +191,8 @@ void StartFusionTask(void *argument)
 RobotMode state = RobotMode::ROBOT_MODE_DISABLED;
 RobotFunction commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
 
-PID turnPID(10.0f, 0.0f, 0.0f, -5.0f, 5.0f);
-PID distancePID(1.0f, 0.02f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f);
+PID turnPID(9.0f, 0.0f, 0.0f, -5.0f, 5.0f);
+PID distancePID(1.2f, 0.02f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
 Servo servo1(&htim12, TIM_CHANNEL_2, 270, 0);
 PWM relay(&htim12, TIM_CHANNEL_1);
@@ -357,6 +357,8 @@ void disable()
 	// Stop the robot
 	left_velocity = 0.0f;
 	right_velocity = 0.0f;
+
+	osDelay(500); // Wait for the robot to stop
 
 	// Disable the motors
 	motor1.disable();
