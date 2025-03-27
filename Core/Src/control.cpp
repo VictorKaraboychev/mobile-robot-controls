@@ -500,7 +500,7 @@ void StartControlTask(void *argument)
 		float curvature_angular_velocity = curvature * target_speed;
 
 		// Calculate the heading controller
-		float heading_error = normalizeAngle(robot.orientation[2] - target_heading);
+		float heading_error = normalizeAngle(target_heading - robot.orientation[2]);
 		float heading_angular_velocity = turnPID.update(heading_error, 0, delta_time);
 
 		// Blend the curvature and heading controllers based on distance to target
