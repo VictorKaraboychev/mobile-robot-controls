@@ -1,5 +1,17 @@
 #include "control.h"
 
+/**
+ * Normalize angle to range [-pi, pi]
+ */
+float normalizeAngle(float angle)
+{
+	while (abs(angle) > M_PI)
+	{
+		angle -= copysignf(2 * M_PI, angle);
+	}
+	return angle;
+}
+
 // State transition function
 EKF::ProcessVector f(const EKF::StateVector &x, const EKF::ControlVector &u)
 {
@@ -10,27 +22,13 @@ EKF::ProcessVector f(const EKF::StateVector &x, const EKF::ControlVector &u)
 	float theta = x[4] + x[10] * dt;
 	float psi = x[5] + x[11] * dt;
 
-	// Constrain angles to [-π, π]
-	if (abs(phi) > M_PI)
-	{
-		phi -= copysignf(M_TWOPI, phi);
-	}
-	if (abs(theta) > M_PI)
-	{
-		theta -= copysignf(M_TWOPI, theta);
-	}
-	if (abs(psi) > M_PI)
-	{
-		psi -= copysignf(M_TWOPI, psi);
-	}
-
 	return EKF::StateVector{
 		x[0] + x[6] * dt + x[12] * dt2, // x = x + x' * Δt + 0.5 * x'' * Δt^2
 		x[1] + x[7] * dt + x[13] * dt2, // y = y + y' * Δt + 0.5 * y'' * Δt^2
 		x[2] + x[8] * dt + x[14] * dt2, // z = z + z' * Δt + 0.5 * z'' * Δt^2
-		phi,							// φ = φ + φ' * Δt
-		theta,							// θ = θ + θ' * Δt
-		psi,							// ψ = ψ + ψ' * Δt
+		normalizeAngle(phi),			// φ = φ + φ' * Δt
+		normalizeAngle(theta),			// θ = θ + θ' * Δt
+		normalizeAngle(psi),			// ψ = ψ + ψ' * Δt
 		x[6] + x[12] * dt,				// x' = x' + x'' * Δt
 		x[7] + x[13] * dt,				// y' = y' + y'' * Δt
 		x[8] + x[14] * dt,				// z' = z' + z'' * Δt
@@ -193,7 +191,7 @@ void StartFusionTask(void *argument)
 RobotMode state = RobotMode::ROBOT_MODE_DISABLED;
 RobotFunction commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
 
-PID turnPID(0.5f, 0.01f, 0.0f, -0.2f, 0.2f, -0.2f, 0.2f);
+PID turnPID(10.0f, 0.0f, 0.0f, -5.0f, 5.0f);
 PID distancePID(1.0f, 0.02f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
 Servo servo1(&htim12, TIM_CHANNEL_2, 270, 0);
@@ -237,8 +235,15 @@ void StartLeftMotorTask(void *argument)
 			float left_rotational_velocity = left_velocity / WHEEL_RADIUS;
 
 			// Set the motor velocity
-			motor1.setVelocity(left_rotational_velocity);
-			motor3.setVelocity(left_rotational_velocity);
+			if (abs(motor1.getVelocity() - left_rotational_velocity) > 0.02f)
+			{
+				motor1.setVelocity(left_rotational_velocity);
+			}
+
+			if (abs(motor3.getVelocity() - left_rotational_velocity) > 0.02f)
+			{
+				motor3.setVelocity(left_rotational_velocity);
+			}
 
 			// Update the encoders data
 			encoders_data.left.position = motor3.getPosition() * WHEEL_RADIUS;
@@ -278,11 +283,18 @@ void StartRightMotorTask(void *argument)
 
 		if (motor2.getMode() != DDSM400_MODE::DDSM400_DISABLED && motor4.getMode() != DDSM400_MODE::DDSM400_DISABLED)
 		{
-			float right_rotational_velocity = right_velocity / WHEEL_RADIUS;
+			float right_rotational_velocity = -right_velocity / WHEEL_RADIUS;
 
 			// Set the motor velocity
-			motor2.setVelocity(-right_rotational_velocity);
-			motor4.setVelocity(-right_rotational_velocity);
+			if (abs(motor2.getVelocity() - right_rotational_velocity) > 0.02f)
+			{
+				motor2.setVelocity(right_rotational_velocity);
+			}
+
+			if (abs(motor4.getVelocity() - right_rotational_velocity) > 0.02f)
+			{
+				motor4.setVelocity(right_rotational_velocity);
+			}
 
 			// Update the encoders data
 			encoders_data.right.position = -motor4.getPosition() * WHEEL_RADIUS;
@@ -358,12 +370,6 @@ void disable()
 
 	RUN(setBuzzer, 1550, MEDIUM_POWER * BLINK_2, OFF_POWER);
 }
-
-struct Point
-{
-	float x;
-	float y;
-};
 
 #include <vector>
 
@@ -617,7 +623,8 @@ std::vector<std::pair<float, float>> path = {
 	{0.6, 0.6},
 };
 
-float angle = 0.0f;
+Eigen::Vector2f target{0.0f, 0.0f};
+float target_heading = 0.0f;
 
 void StartControlTask(void *argument)
 {
@@ -629,7 +636,7 @@ void StartControlTask(void *argument)
 	relay.off();
 
 	// Gyro calibration takes 5 seconds, wait for it to finish
-	osDelay(6000);
+	osDelay(5000);
 
 	// Enable the robot
 	// commanded_function = RobotFunction::ROBOT_FUNCTION_ENABLE;
@@ -713,24 +720,33 @@ void StartControlTask(void *argument)
 		// Eigen::Vector2f target{path[path_index].first, path[path_index].second};
 
 		// Calculate the euclidean distance to the target
-		// float distance_to_target = (target - position).norm();
-		// float angle_to_target = atan2f(target[1] - position[1], target[0] - position[0]);
+		float distance_to_target = (target - position).norm();
+		float angle_to_target = atan2f(target[1] - position[1], target[0] - position[0]);
 
-		float target_speed = 0.1f; // distancePID.update(distance_to_target, 0, delta_time);
-		float turn_speed = turnPID.update(0, angle, delta_time);
+		float target_speed = distancePID.update(distance_to_target, 0, delta_time);
 
-		// // If target is behind the robot, reverse
+		// If target is behind the robot, reverse
 		// if (angle_to_target < 0)
 		// {
 		// 	target_speed *= -1;
 		// }
 
 		// Calculate the curvature
-		// float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
+		float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
+		float curvature_angular_velocity = curvature * target_speed;
+
+		// Calculate the heading controller
+		float heading_error = normalizeAngle(target_heading - robot.orientation[2]);
+		float heading_angular_velocity = turnPID.update(heading_error, 0, delta_time);
+
+		// Blend the curvature and heading controllers based on distance to target
+		float blend_distance = 0.18f;
+		float blend = std::min(distance_to_target / blend_distance, 1.0f); // when blend = 1 -> curvature_speed, when blend = 0 -> heading_speed
+		float angular_velocity = (1 - blend) * heading_angular_velocity + blend * curvature_angular_velocity;
 
 		// Calculate the left and right wheel velocities
-		left_velocity = target_speed * (1 + turn_speed);  //(1 - curvature * WHEEL_DISTANCE / 2.0f);
-		right_velocity = target_speed * (1 - turn_speed); //(1 + curvature * WHEEL_DISTANCE / 2.0f);
+		left_velocity = target_speed - angular_velocity * WHEEL_DISTANCE / 2.0f;
+		right_velocity = target_speed + angular_velocity * WHEEL_DISTANCE / 2.0f;
 
 		// Limit the wheel velocities to the maximum speed
 		float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
@@ -740,6 +756,13 @@ void StartControlTask(void *argument)
 		{
 			left_velocity *= MAX_SPEED / max_velocity;
 			right_velocity *= MAX_SPEED / max_velocity;
+		}
+
+		// If the robot is within 3 cm of the target stop
+		if (distance_to_target < 0.03f)
+		{
+			left_velocity = 0.0f;
+			right_velocity = 0.0f;
 		}
 
 		// If the robot is close to the target, move to the next target
@@ -804,8 +827,7 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 		float theta = 0;
 		memcpy(&theta, &rx[8], 4);
 
-		float R = 0.04f;
-		float D = 0.875f;
+		float D = 0.1225f;
 		float O = 0.018f;
 
 		float phi = robot.orientation[2];
@@ -813,11 +835,11 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 		Eigen::Rotation2D rotation(phi);
 
 		Eigen::Vector2f robot_position{robot.position[0], robot.position[1]};
-		Eigen::Vector2f camera_target_position{dx + O, R * dy + D};
+		Eigen::Vector2f camera_target_position{dx + O, dy + D};
 
-		// target = robot_position + rotation * camera_target_position;
+		target = robot_position + rotation * camera_target_position;
 
-		angle = atan2f(camera_target_position[1], camera_target_position[0]);
+		target_heading = normalizeAngle(theta + robot.orientation[2] - M_PI_2);
 
 		// printf("Command: %.4f %.4f %.4f\n", target_position[0], target_position[1], theta);
 	}
