@@ -191,7 +191,7 @@ void StartFusionTask(void *argument)
 RobotMode state = RobotMode::ROBOT_MODE_DISABLED;
 RobotFunction commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
 
-PID turnPID(9.0f, 0.0f, 0.0f, -5.0f, 5.0f);
+PID turnPID(8.0f, 0.0f, 0.0f, -10.0f, 10.0f, -1.0f, 1.0f);
 PID distancePID(1.2f, 0.02f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
 Servo servo1(&htim12, TIM_CHANNEL_2, 270, 0);
@@ -204,6 +204,10 @@ DDSM400 motor1(&huart4, &uart4MutexHandle); // Front left
 DDSM400 motor2(&huart7, &uart7MutexHandle); // Front right
 DDSM400 motor3(&huart4, &uart4MutexHandle); // Rear left
 DDSM400 motor4(&huart7, &uart7MutexHandle); // Rear right
+
+Eigen::Vector2f target{0.0f, 0.0f};
+float target_heading = 0.0f;
+float previous_target_heading = 0.0f;
 
 volatile float left_velocity = 0;
 bool left_motor_active = false;
@@ -345,9 +349,38 @@ void StartRightMotorTask(void *argument)
 	}
 }
 
+void drive_to_target(Eigen::Vector2f _target, float _target_heading)
+{
+	target = _target;
+	target_heading = _target_heading;
+
+	float distance_to_target = 0.0f;
+	float heading_error = 0.0f;
+
+	// While we are not within a tolerance of the target heading and position
+	do
+	{
+		Eigen::Vector2f position = robot.position.head<2>();
+
+		// Calculate the distance to the target and heading error
+		distance_to_target = (target - position).norm();
+		heading_error = normalizeAngle(target_heading - robot.orientation[2]);
+
+		osDelay(10);
+	} while (distance_to_target > 0.02f || fabs(heading_error) > 0.04f);
+}
+
 void pickup()
 {
 	printf("Picking up the tape...\n");
+
+	float pickup_distance = 0.075f + 0.125f;
+
+	Eigen::Vector2f look_target{0.6, 0.6};
+
+	float look_heading = atan2(look_target[1] - robot.position[1], look_target[0] - robot.position[0]);
+
+	drive_to_target({target[0], target[1]}, look_heading);
 
 	servo1.setAngle(SERVO_PICKUP_ANGLE);
 
@@ -367,6 +400,12 @@ void dropoff()
 
 	relay.off();
 	servo1.setAngle(SERVO_DEFAULT_ANGLE);
+}
+
+void load()
+{
+	servo1.setAngle(SERVO_PICKUP_ANGLE);
+	relay.off();
 }
 
 void enable()
@@ -401,261 +440,6 @@ void disable()
 	RUN(setBuzzer, 1550, MEDIUM_POWER * BLINK_2, OFF_POWER);
 }
 
-#include <vector>
-
-std::vector<std::pair<float, float>> path = {
-	{0, 0},
-	{0, 0.025},
-	{0, 0.05},
-	{0, 0.075},
-	{0, 0.1},
-	{0, 0.125},
-	{0, 0.15},
-	{0, 0.175},
-	{0, 0.2},
-	{0, 0.225},
-	{0, 0.25},
-	{0, 0.275},
-	{0, 0.3},
-	{0, 0.325},
-	{0, 0.35},
-	{0, 0.375},
-	{0, 0.4},
-	{0, 0.425},
-	{0, 0.45},
-	{0, 0.475},
-	{0, 0.5},
-	{0, 0.525},
-	{0, 0.55},
-	{0, 0.575},
-	{0, 0.6},
-	{0, 0.625},
-	{0, 0.65},
-	{0, 0.675},
-	{0, 0.7},
-	{0, 0.725},
-	{0, 0.75},
-	{0, 0.775},
-	{0, 0.8},
-	{0, 0.825},
-	{0, 0.85},
-	{0, 0.875},
-	{0, 0.9},
-	{0, 0.925},
-	{0, 0.95},
-	{0, 0.975},
-	{0, 1},
-	{0, 1.025},
-	{0, 1.05},
-	{0, 1.075},
-	{0, 1.1},
-	{0, 1.125},
-	{0, 1.15},
-	{0, 1.175},
-	{0, 1.2},
-	{0, 1.225},
-	{0, 1.25},
-	{0, 1.275},
-	{0, 1.3},
-	{0, 1.325},
-	{0, 1.35},
-	{0.0018, 1.3735},
-	{0.0073, 1.3964},
-	{0.0163, 1.4181},
-	{0.0286, 1.4382},
-	{0.0439, 1.4561},
-	{0.0618, 1.4714},
-	{0.0819, 1.4837},
-	{0.1036, 1.4927},
-	{0.1265, 1.4982},
-	{0.15, 1.5},
-	{0.175, 1.5},
-	{0.2, 1.5},
-	{0.225, 1.5},
-	{0.25, 1.5},
-	{0.275, 1.5},
-	{0.3, 1.5},
-	{0.325, 1.5},
-	{0.35, 1.5},
-	{0.375, 1.5},
-	{0.4, 1.5},
-	{0.425, 1.5},
-	{0.45, 1.5},
-	{0.475, 1.5},
-	{0.5, 1.5},
-	{0.525, 1.5},
-	{0.55, 1.5},
-	{0.575, 1.5},
-	{0.6, 1.5},
-	{0.625, 1.5},
-	{0.65, 1.5},
-	{0.675, 1.5},
-	{0.7, 1.5},
-	{0.725, 1.5},
-	{0.75, 1.5},
-	{0.775, 1.5},
-	{0.8, 1.5},
-	{0.825, 1.5},
-	{0.85, 1.5},
-	{0.875, 1.5},
-	{0.9, 1.5},
-	{0.925, 1.5},
-	{0.95, 1.5},
-	{0.975, 1.5},
-	{1, 1.5},
-	{1.025, 1.5},
-	{1.05, 1.5},
-	{1.075, 1.5},
-	{1.1, 1.5},
-	{1.125, 1.5},
-	{1.15, 1.5},
-	{1.175, 1.5},
-	{1.2, 1.5},
-	{1.225, 1.5},
-	{1.25, 1.5},
-	{1.275, 1.5},
-	{1.3, 1.5},
-	{1.325, 1.5},
-	{1.35, 1.5},
-	{1.3735, 1.4982},
-	{1.3964, 1.4927},
-	{1.4181, 1.4837},
-	{1.4382, 1.4714},
-	{1.4561, 1.4561},
-	{1.4714, 1.4382},
-	{1.4837, 1.4181},
-	{1.4927, 1.3964},
-	{1.4982, 1.3735},
-	{1.5, 1.35},
-	{1.4982, 1.3265},
-	{1.4927, 1.3036},
-	{1.4837, 1.2819},
-	{1.4714, 1.2618},
-	{1.4561, 1.2439},
-	{1.4382, 1.2286},
-	{1.4181, 1.2163},
-	{1.3964, 1.2073},
-	{1.3735, 1.2018},
-	{1.35, 1.2},
-	{1.3265, 1.1982},
-	{1.3036, 1.1927},
-	{1.2819, 1.1837},
-	{1.2618, 1.1714},
-	{1.2439, 1.1561},
-	{1.2286, 1.1382},
-	{1.2163, 1.1181},
-	{1.2073, 1.0964},
-	{1.2018, 1.0735},
-	{1.2, 1.05},
-	{1.2018, 1.0265},
-	{1.2073, 1.0036},
-	{1.2163, 0.9819},
-	{1.2286, 0.9618},
-	{1.2439, 0.9439},
-	{1.2618, 0.9286},
-	{1.2819, 0.9163},
-	{1.3036, 0.9073},
-	{1.3265, 0.9018},
-	{1.35, 0.9},
-	{1.3735, 0.8982},
-	{1.3964, 0.8927},
-	{1.4181, 0.8837},
-	{1.4382, 0.8714},
-	{1.4561, 0.8561},
-	{1.4714, 0.8382},
-	{1.4837, 0.8181},
-	{1.4927, 0.7964},
-	{1.4982, 0.7735},
-	{1.5, 0.75},
-	{1.5, 0.725},
-	{1.5, 0.7},
-	{1.5, 0.675},
-	{1.5, 0.65},
-	{1.5, 0.625},
-	{1.5, 0.6},
-	{1.5, 0.575},
-	{1.5, 0.55},
-	{1.5, 0.525},
-	{1.5, 0.5},
-	{1.5, 0.475},
-	{1.5, 0.45},
-	{1.5, 0.425},
-	{1.5, 0.4},
-	{1.5, 0.375},
-	{1.5, 0.35},
-	{1.5, 0.325},
-	{1.5, 0.3},
-	{1.5, 0.275},
-	{1.5, 0.25},
-	{1.5, 0.225},
-	{1.5, 0.2},
-	{1.5, 0.175},
-	{1.5, 0.15},
-	{1.4982, 0.1265},
-	{1.4927, 0.1036},
-	{1.4837, 0.0819},
-	{1.4714, 0.0618},
-	{1.4561, 0.0439},
-	{1.4382, 0.0286},
-	{1.4181, 0.0163},
-	{1.3964, 0.0073},
-	{1.3735, 0.0018},
-	{1.35, 0},
-	{1.325, 0},
-	{1.3, 0},
-	{1.275, 0},
-	{1.25, 0},
-	{1.225, 0},
-	{1.2, 0},
-	{1.175, 0},
-	{1.15, 0},
-	{1.125, 0},
-	{1.1, 0},
-	{1.075, 0},
-	{1.05, 0},
-	{1.0265, 0.0018},
-	{1.0036, 0.0073},
-	{0.9819, 0.0163},
-	{0.9618, 0.0286},
-	{0.9439, 0.0439},
-	{0.9286, 0.0618},
-	{0.9163, 0.0819},
-	{0.9073, 0.1036},
-	{0.9018, 0.1265},
-	{0.9, 0.15},
-	{0.9, 0.175},
-	{0.9, 0.2},
-	{0.9, 0.225},
-	{0.9, 0.25},
-	{0.9, 0.275},
-	{0.9, 0.3},
-	{0.9, 0.325},
-	{0.9, 0.35},
-	{0.9, 0.375},
-	{0.9, 0.4},
-	{0.9, 0.425},
-	{0.9, 0.45},
-	{0.8982, 0.4735},
-	{0.8927, 0.4964},
-	{0.8837, 0.5181},
-	{0.8714, 0.5382},
-	{0.8561, 0.5561},
-	{0.8382, 0.5714},
-	{0.8181, 0.5837},
-	{0.7964, 0.5927},
-	{0.7735, 0.5982},
-	{0.75, 0.6},
-	{0.725, 0.6},
-	{0.7, 0.6},
-	{0.675, 0.6},
-	{0.65, 0.6},
-	{0.625, 0.6},
-	{0.6, 0.6},
-};
-
-Eigen::Vector2f target{0.0f, 0.0f};
-float target_heading = 0.0f;
-
 void StartControlTask(void *argument)
 {
 	// Servo Initialization
@@ -681,55 +465,6 @@ void StartControlTask(void *argument)
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
 
-		// Update the robot state
-		switch (commanded_function)
-		{
-		case RobotFunction::ROBOT_FUNCTION_ENABLE:
-		{
-			if (state == RobotMode::ROBOT_MODE_DISABLED) // If the robot is disabled
-			{
-				state = RobotMode::ROBOT_MODE_ENABLING_TRANSITION;
-				enable();
-				state = RobotMode::ROBOT_MODE_ENABLED;
-			}
-			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
-		}
-		break;
-		case RobotFunction::ROBOT_FUNCTION_DISABLE:
-		{
-			if (state != RobotMode::ROBOT_MODE_DISABLED) // If the robot is not disabled
-			{
-				state = RobotMode::ROBOT_MODE_DISABLING_TRANSITION;
-				disable();
-				state = RobotMode::ROBOT_MODE_DISABLED;
-			}
-			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
-		}
-		break;
-		case RobotFunction::ROBOT_FUNCTION_PICKUP:
-		{
-			if (state == RobotMode::ROBOT_MODE_ENABLED) // If the robot is enabled
-			{
-				state = RobotMode::ROBOT_MODE_PICKUP_TRANSITION;
-				pickup();
-				state = RobotMode::ROBOT_MODE_ENABLED;
-			}
-			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
-		}
-		break;
-		case RobotFunction::ROBOT_FUNCTION_DROPOFF:
-		{
-			if (state == RobotMode::ROBOT_MODE_ENABLED) // If the robot is enabled
-			{
-				state = RobotMode::ROBOT_MODE_DROPOFF_TRANSITION;
-				dropoff();
-				state = RobotMode::ROBOT_MODE_ENABLED;
-			}
-			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
-		}
-		break;
-		}
-
 		if (state == RobotMode::ROBOT_MODE_DISABLED)
 		{
 			// Stop the robot
@@ -751,32 +486,38 @@ void StartControlTask(void *argument)
 
 		// Calculate the euclidean distance to the target
 		float distance_to_target = (target - position).norm();
-		float angle_to_target = atan2f(target[1] - position[1], target[0] - position[0]);
+		// float angle_to_target = normalizeAngle(robot.orientation[2] - atan2f(target[1] - position[1], target[0] - position[0]));
 
 		float target_speed = distancePID.update(distance_to_target, 0, delta_time);
 
-		// If target is behind the robot, reverse
-		// if (angle_to_target < 0)
-		// {
-		// 	target_speed *= -1;
-		// }
+		if (distance_to_target < 0.05f)
+		{
+			target_speed = 0.0f;
+		}
 
 		// Calculate the curvature
 		float curvature = PurePursuit<float>::CalculateCurvature(position, robot.orientation[2] + M_PI_2, target);
 		float curvature_angular_velocity = curvature * target_speed;
 
 		// Calculate the heading controller
-		float heading_error = normalizeAngle(target_heading - robot.orientation[2]);
+		float heading_error = normalizeAngle(robot.orientation[2] - target_heading);
 		float heading_angular_velocity = turnPID.update(heading_error, 0, delta_time);
 
 		// Blend the curvature and heading controllers based on distance to target
-		float blend_distance = 0.18f;
+		float blend_distance = 0.15f;
 		float blend = std::min(distance_to_target / blend_distance, 1.0f); // when blend = 1 -> curvature_speed, when blend = 0 -> heading_speed
 		float angular_velocity = (1 - blend) * heading_angular_velocity + blend * curvature_angular_velocity;
 
 		// Calculate the left and right wheel velocities
 		left_velocity = target_speed - angular_velocity * WHEEL_DISTANCE / 2.0f;
 		right_velocity = target_speed + angular_velocity * WHEEL_DISTANCE / 2.0f;
+
+		// If target is behind the robot, reverse
+		// if (angle_to_target < 0)
+		// {
+		// 	left_velocity = -left_velocity;
+		// 	right_velocity = -right_velocity;
+		// }
 
 		// Limit the wheel velocities to the maximum speed
 		float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
@@ -786,13 +527,6 @@ void StartControlTask(void *argument)
 		{
 			left_velocity *= MAX_SPEED / max_velocity;
 			right_velocity *= MAX_SPEED / max_velocity;
-		}
-
-		// If the robot is within 3 cm of the target stop
-		if (distance_to_target < 0.03f)
-		{
-			left_velocity = 0.0f;
-			right_velocity = 0.0f;
 		}
 
 		// If the robot is close to the target, move to the next target
@@ -838,6 +572,17 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 	{
 		// TRANSMITTING DATA
 
+	case 0x02: // Cannot see line
+	{
+		bool last_direction = rx[0] & 0x01; // 1 = right, 0 = left
+
+		if (state == RobotMode::ROBOT_MODE_ENABLED)
+		{
+			// Delta heading
+			target_heading = normalizeAngle(target_heading + copysignf(1.0f * DEG_TO_RAD, last_direction ? 1.0f : -1.0f));
+		}
+	}
+	break;
 	case 0x05: // Set robot state
 	{
 		commanded_function = (RobotFunction)rx[0];
@@ -869,6 +614,7 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 
 		target = robot_position + rotation * camera_target_position;
 
+		previous_target_heading = target_heading;
 		target_heading = normalizeAngle(theta + robot.orientation[2] - M_PI_2);
 
 		// printf("Command: %.4f %.4f %.4f\n", target_position[0], target_position[1], theta);
@@ -1025,6 +771,62 @@ void StartCommTask(void *argument)
 		float delta_time = (osKernelGetTickCount() - last_time) / 1000.0f;
 		last_time = osKernelGetTickCount();
 
-		osDelayUntil(last_time + 1000); // 1 Hz
+		// Update the robot state
+		switch (commanded_function)
+		{
+		case RobotFunction::ROBOT_FUNCTION_ENABLE:
+		{
+			if (state == RobotMode::ROBOT_MODE_DISABLED) // If the robot is disabled
+			{
+				state = RobotMode::ROBOT_MODE_ENABLING_TRANSITION;
+				enable();
+				state = RobotMode::ROBOT_MODE_ENABLED;
+			}
+			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
+		}
+		break;
+		case RobotFunction::ROBOT_FUNCTION_DISABLE:
+		{
+			if (state != RobotMode::ROBOT_MODE_DISABLED) // If the robot is not disabled
+			{
+				state = RobotMode::ROBOT_MODE_DISABLING_TRANSITION;
+				disable();
+				state = RobotMode::ROBOT_MODE_DISABLED;
+			}
+			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
+		}
+		break;
+		case RobotFunction::ROBOT_FUNCTION_PICKUP:
+		{
+			if (state == RobotMode::ROBOT_MODE_ENABLED) // If the robot is enabled
+			{
+				state = RobotMode::ROBOT_MODE_PICKUP_TRANSITION;
+				pickup();
+				state = RobotMode::ROBOT_MODE_ENABLED;
+			}
+			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
+		}
+		break;
+		case RobotFunction::ROBOT_FUNCTION_DROPOFF:
+		{
+			if (state == RobotMode::ROBOT_MODE_ENABLED) // If the robot is enabled
+			{
+				state = RobotMode::ROBOT_MODE_DROPOFF_TRANSITION;
+				dropoff();
+				state = RobotMode::ROBOT_MODE_ENABLED;
+			}
+			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
+		}
+		case RobotFunction::ROBOT_FUNCTION_LOAD:
+		{
+			// Load the tape
+			load();
+
+			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
+		}
+		break;
+		}
+
+		osDelayUntil(last_time + 10); // 100 Hz
 	}
 }
