@@ -191,7 +191,7 @@ void StartFusionTask(void *argument)
 RobotMode state = RobotMode::ROBOT_MODE_DISABLED;
 RobotFunction commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
 
-PID turnPID(8.0f, 0.0f, 0.0f, -10.0f, 10.0f, -1.0f, 1.0f);
+PID turnPID(8.0f, 0.0f, 1.5f, -10.0f, 10.0f, -1.0f, 1.0f);
 PID distancePID(1.2f, 0.02f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
 Servo servo1(&htim12, TIM_CHANNEL_2, 270, 0);
@@ -252,11 +252,6 @@ void StartLeftMotorTask(void *argument)
 			// Set the motor velocity
 			motor1.setVelocity(left_rotational_velocity);
 			motor3.setVelocity(left_rotational_velocity);
-
-			// Update the encoders data
-			encoders_data.left.position = motor3.getPosition() * WHEEL_RADIUS;
-			encoders_data.left.velocity = motor3.getVelocity() * WHEEL_RADIUS;
-			encoders_data.left.data_ready = true;
 		}
 		else
 		{
@@ -273,6 +268,10 @@ void StartLeftMotorTask(void *argument)
 			}
 		}
 
+		// Update the encoders data
+		// encoders_data.left.position = motor3.getPosition() * WHEEL_RADIUS;
+		encoders_data.left.velocity = motor3.getVelocity() * WHEEL_RADIUS;
+		encoders_data.left.data_ready = true;
 		encoders_data.left.active = motor3.getStatus() == DDSM400_FAULT::DDSM400_NONE;
 
 		osDelayUntil(last_time + 25); // 40 Hz
@@ -322,11 +321,6 @@ void StartRightMotorTask(void *argument)
 			// Set the motor velocity
 			motor2.setVelocity(right_rotational_velocity);
 			motor4.setVelocity(right_rotational_velocity);
-
-			// Update the encoders data
-			encoders_data.right.position = -motor4.getPosition() * WHEEL_RADIUS;
-			encoders_data.right.velocity = -motor4.getVelocity() * WHEEL_RADIUS;
-			encoders_data.right.data_ready = true;
 		}
 		else
 		{
@@ -343,19 +337,25 @@ void StartRightMotorTask(void *argument)
 			}
 		}
 
+		// Update the encoders data
+		// encoders_data.right.position = -motor4.getPosition() * WHEEL_RADIUS;
+		encoders_data.right.velocity = -motor4.getVelocity() * WHEEL_RADIUS;
+		encoders_data.right.data_ready = true;
 		encoders_data.right.active = motor4.getStatus() == DDSM400_FAULT::DDSM400_NONE;
 
 		osDelayUntil(last_time + 25); // 40 Hz
 	}
 }
 
-void drive_to_target(Eigen::Vector2f _target, float _target_heading)
+void drive_to_target(Eigen::Vector2f _target, float _target_heading, uint32_t timeout = UINT32_MAX)
 {
 	target = _target;
 	target_heading = _target_heading;
 
 	float distance_to_target = 0.0f;
 	float heading_error = 0.0f;
+
+	uint32_t start_time = osKernelGetTickCount();
 
 	// While we are not within a tolerance of the target heading and position
 	do
@@ -367,26 +367,27 @@ void drive_to_target(Eigen::Vector2f _target, float _target_heading)
 		heading_error = normalizeAngle(target_heading - robot.orientation[2]);
 
 		osDelay(10);
-	} while (distance_to_target > 0.02f || fabs(heading_error) > 0.04f);
+	} while ((distance_to_target > 0.0425f || fabs(heading_error) > 0.05f) && (osKernelGetTickCount() - start_time) < timeout);
 }
 
 void pickup()
 {
 	printf("Picking up the tape...\n");
 
-	float pickup_distance = 0.075f + 0.125f;
+	float pickup_distance = 0.1f + 0.125f;
 
-	Eigen::Vector2f look_target{0.6, 0.6};
+	Eigen::Vector2f look_target{0.6f, 0.6f};
+	float look_heading = normalizeAngle(atan2(look_target[1] - robot.position[1], look_target[0] - robot.position[0]) - M_PI_2);
 
-	float look_heading = atan2(look_target[1] - robot.position[1], look_target[0] - robot.position[0]);
-
-	drive_to_target({target[0], target[1]}, look_heading);
+	drive_to_target({0.6f + pickup_distance, 0.6f}, 90.0f * DEG_TO_RAD, 5000);
 
 	servo1.setAngle(SERVO_PICKUP_ANGLE);
 
 	osDelay(750); // Pick up the tape with the servo
 
 	servo1.setAngle(SERVO_DEFAULT_ANGLE);
+
+	drive_to_target({0.6, 0.6}, -120.0f * DEG_TO_RAD, 5000);
 }
 
 void dropoff()
@@ -411,9 +412,6 @@ void load()
 void enable()
 {
 	printf("Enabling the robot...\n");
-
-	// Reset the robot state
-	ekf.reset();
 
 	// Enable the motors
 	left_motor_active = true;
@@ -450,7 +448,7 @@ void StartControlTask(void *argument)
 	relay.off();
 
 	// Gyro calibration takes 5 seconds, wait for it to finish
-	osDelay(5000);
+	osDelay(6000);
 
 	// Enable the robot
 	// commanded_function = RobotFunction::ROBOT_FUNCTION_ENABLE;
@@ -480,17 +478,32 @@ void StartControlTask(void *argument)
 
 		Eigen::Vector2f position = robot.position.head<2>();
 
+		// // Set the target over time
+		// float t = (osKernelGetTickCount() / 1000.0f) - initial_time;
+		// float s = -0.25f; // m/s
+
+		// // Parametric equation of a line
+		// target[0] = std::max(-0.3f, s * t);
+		// target[1] = std::max(-1.0f, s * t);
+		// target_heading = 0.0f;
+
 		// Get the target position
 		// Eigen::Vector2f last_target{path[path_index - 1].first, path[path_index - 1].second};
 		// Eigen::Vector2f target{path[path_index].first, path[path_index].second};
 
 		// Calculate the euclidean distance to the target
 		float distance_to_target = (target - position).norm();
-		// float angle_to_target = normalizeAngle(robot.orientation[2] - atan2f(target[1] - position[1], target[0] - position[0]));
+		float angle_to_target = normalizeAngle(robot.orientation[2] - atan2f(target[1] - position[1], target[0] - position[0]) + M_PI_2);
 
 		float target_speed = distancePID.update(distance_to_target, 0, delta_time);
 
-		if (distance_to_target < 0.05f)
+		// If target is behind the robot, reverse
+		if (abs(angle_to_target) > M_PI_2)
+		{
+			target_speed *= -1.0f;
+		}
+
+		if (distance_to_target < 0.04f)
 		{
 			target_speed = 0.0f;
 		}
@@ -511,13 +524,6 @@ void StartControlTask(void *argument)
 		// Calculate the left and right wheel velocities
 		left_velocity = target_speed - angular_velocity * WHEEL_DISTANCE / 2.0f;
 		right_velocity = target_speed + angular_velocity * WHEEL_DISTANCE / 2.0f;
-
-		// If target is behind the robot, reverse
-		// if (angle_to_target < 0)
-		// {
-		// 	left_velocity = -left_velocity;
-		// 	right_velocity = -right_velocity;
-		// }
 
 		// Limit the wheel velocities to the maximum speed
 		float max_velocity = std::max(abs(left_velocity), abs(right_velocity));
@@ -579,7 +585,7 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 		if (state == RobotMode::ROBOT_MODE_ENABLED)
 		{
 			// Delta heading
-			target_heading = normalizeAngle(target_heading + copysignf(1.0f * DEG_TO_RAD, last_direction ? 1.0f : -1.0f));
+			target_heading = normalizeAngle(target_heading + copysignf(3.0f * DEG_TO_RAD, last_direction ? 1.0f : -1.0f));
 		}
 	}
 	break;

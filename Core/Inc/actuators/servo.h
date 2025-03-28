@@ -46,7 +46,7 @@ public:
 		// Constrain the angle to the valid range
 		float limited_angle = fminf(fmaxf(angle, min_angle), max_angle);
 
-		this->profile = TrapezoidalMotionProfile(speed, 100.0f);
+		this->profile = TrapezoidalMotionProfile(speed, 150.0f);
 
 		this->profile.init(this->angle);
 		this->profile.setTarget(limited_angle);
