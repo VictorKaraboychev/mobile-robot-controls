@@ -61,7 +61,7 @@ void StartDebugTask(void *argument)
 	// Startup loop
 	while (osKernelGetTickCount() < 1000)
 	{
-		buzzer.set(HIGH_POWER * blink({500, 200, 100, 100, 100}, 1000));
+		buzzer.set(LOW_POWER * blink({500, 200, 100, 100, 100}, 1000));
 
 		osDelay(10); // 100 Hz
 	}

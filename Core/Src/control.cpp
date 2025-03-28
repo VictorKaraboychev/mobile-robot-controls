@@ -191,10 +191,10 @@ void StartFusionTask(void *argument)
 RobotMode state = RobotMode::ROBOT_MODE_DISABLED;
 RobotFunction commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
 
-PID turnPID(8.0f, 0.0f, 1.5f, -10.0f, 10.0f, -1.0f, 1.0f);
-PID distancePID(1.85f, 0.02f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f);
+PID turnPID(8.0f, 0.2f, 1.5f, -10.0f, 10.0f, -1.0f, 1.0f);
+PID distancePID(5.0f, 0.02f, 1.5f, -1.0f, 1.0f, -0.25f, 0.25f);
 
-Servo servo1(&htim12, TIM_CHANNEL_2, 270, 0);
+Servo servo1(&htim12, TIM_CHANNEL_2, 270.0f, 0.0f);
 PWM relay(&htim12, TIM_CHANNEL_1);
 
 extern osMutexId_t uart4MutexHandle;
@@ -467,6 +467,14 @@ void StartControlTask(void *argument)
 	// Enable the robot
 	// commanded_function = RobotFunction::ROBOT_FUNCTION_ENABLE;
 
+	// while (state != RobotMode::ROBOT_MODE_ENABLED)
+	// {
+	// 	osDelay(10);
+	// }
+
+	// target = Eigen::Vector2f{0.0f, 1.0f};
+	// target_heading = M_PI_2;
+
 	float initial_time = osKernelGetTickCount() / 1000.0f;
 	uint32_t last_time = osKernelGetTickCount();
 
@@ -531,7 +539,7 @@ void StartControlTask(void *argument)
 		float heading_angular_velocity = turnPID.update(heading_error, 0, delta_time);
 
 		// Blend the curvature and heading controllers based on distance to target
-		float blend_distance = 0.15f;
+		float blend_distance = 0.25f;
 		float blend = std::min(distance_to_target / blend_distance, 1.0f); // when blend = 1 -> curvature_speed, when blend = 0 -> heading_speed
 		float angular_velocity = (1 - blend) * heading_angular_velocity + blend * curvature_angular_velocity;
 
@@ -736,8 +744,6 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 		// memcpy(&_tx[0], &target[0], 4);
 		// memcpy(&_tx[4], &target[1], 4);
 	}
-	default:
-		break;
 	}
 }
 
