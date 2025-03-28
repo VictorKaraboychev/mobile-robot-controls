@@ -192,7 +192,7 @@ RobotMode state = RobotMode::ROBOT_MODE_DISABLED;
 RobotFunction commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
 
 PID turnPID(8.0f, 0.0f, 1.5f, -10.0f, 10.0f, -1.0f, 1.0f);
-PID distancePID(1.2f, 0.02f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f);
+PID distancePID(1.85f, 0.02f, 0.0f, -1.0f, 1.0f, -1.0f, 1.0f);
 
 Servo servo1(&htim12, TIM_CHANNEL_2, 270, 0);
 PWM relay(&htim12, TIM_CHANNEL_1);
@@ -208,6 +208,10 @@ DDSM400 motor4(&huart7, &uart7MutexHandle); // Rear right
 Eigen::Vector2f target{0.0f, 0.0f};
 float target_heading = 0.0f;
 float previous_target_heading = 0.0f;
+
+// Line following variables
+bool returning = false;
+Eigen::Vector2f lego_position{0.0f, 0.0f};
 
 volatile float left_velocity = 0;
 bool left_motor_active = false;
@@ -367,46 +371,7 @@ void drive_to_target(Eigen::Vector2f _target, float _target_heading, uint32_t ti
 		heading_error = normalizeAngle(target_heading - robot.orientation[2]);
 
 		osDelay(10);
-	} while ((distance_to_target > 0.0425f || fabs(heading_error) > 0.05f) && (osKernelGetTickCount() - start_time) < timeout);
-}
-
-void pickup()
-{
-	printf("Picking up the tape...\n");
-
-	float pickup_distance = 0.1f + 0.125f;
-
-	Eigen::Vector2f look_target{0.6f, 0.6f};
-	float look_heading = normalizeAngle(atan2(look_target[1] - robot.position[1], look_target[0] - robot.position[0]) - M_PI_2);
-
-	drive_to_target({0.6f + pickup_distance, 0.6f}, 90.0f * DEG_TO_RAD, 5000);
-
-	servo1.setAngle(SERVO_PICKUP_ANGLE);
-
-	osDelay(750); // Pick up the tape with the servo
-
-	servo1.setAngle(SERVO_DEFAULT_ANGLE);
-
-	drive_to_target({0.6, 0.6}, -120.0f * DEG_TO_RAD, 5000);
-}
-
-void dropoff()
-{
-	printf("Dropping off the tape...\n");
-
-	servo1.setAngle(SERVO_DROPOFF_ANGLE);
-	relay.on();
-
-	osDelay(1500); // Cut the tape with the relay
-
-	relay.off();
-	servo1.setAngle(SERVO_DEFAULT_ANGLE);
-}
-
-void load()
-{
-	servo1.setAngle(SERVO_PICKUP_ANGLE);
-	relay.off();
+	} while ((distance_to_target > 0.03f || fabs(heading_error) > 0.03f) && (osKernelGetTickCount() - start_time) < timeout);
 }
 
 void enable()
@@ -416,6 +381,9 @@ void enable()
 	// Enable the motors
 	left_motor_active = true;
 	right_motor_active = true;
+
+	// Set return to false
+	returning = false;
 
 	// Set servo to initial position
 	servo1.setAngle(SERVO_DEFAULT_ANGLE);
@@ -438,6 +406,52 @@ void disable()
 	RUN(setBuzzer, 1550, MEDIUM_POWER * BLINK_2, OFF_POWER);
 }
 
+void pickup(Eigen::Vector2f pickup_target)
+{
+	printf("Picking up the tape...\n");
+
+	float pickup_distance = 0.155f;
+
+	// float look_heading = normalizeAngle(atan2(pickup_target[1] - robot.position[1], pickup_target[0] - robot.position[0]) - M_PI_2);
+	// Eigen::Vector2f target_position = pickup_target - Eigen::Vector2f{pickup_distance * cos(look_heading + M_PI_2), pickup_distance * sin(look_heading + M_PI_2)};
+
+	drive_to_target(robot.position.head<2>(), 85.0f * DEG_TO_RAD, 5000);
+	// drive_to_target(target_position, look_heading, 5000);
+
+	servo1.setAngle(SERVO_PICKUP_ANGLE);
+
+	osDelay(750); // Pick up the tape with the servo
+
+	servo1.setAngle(SERVO_DEFAULT_ANGLE);
+
+	drive_to_target(robot.position.head<2>(), -135.0f * DEG_TO_RAD, 5000);
+
+	returning = true;
+}
+
+void dropoff()
+{
+	printf("Dropping off the tape...\n");
+
+	drive_to_target({0.0f, 0.1f}, 180.0f * DEG_TO_RAD, 5000);
+
+	servo1.setAngle(SERVO_DROPOFF_ANGLE);
+	relay.on();
+
+	osDelay(2000); // Cut the tape with the relay
+
+	relay.off();
+	servo1.setAngle(SERVO_STORAGE_ANGLE);
+
+	disable();
+}
+
+void load()
+{
+	servo1.setAngle(SERVO_PICKUP_ANGLE);
+	relay.off();
+}
+
 void StartControlTask(void *argument)
 {
 	// Servo Initialization
@@ -448,7 +462,7 @@ void StartControlTask(void *argument)
 	relay.off();
 
 	// Gyro calibration takes 5 seconds, wait for it to finish
-	osDelay(6000);
+	osDelay(5000);
 
 	// Enable the robot
 	// commanded_function = RobotFunction::ROBOT_FUNCTION_ENABLE;
@@ -503,7 +517,7 @@ void StartControlTask(void *argument)
 			target_speed *= -1.0f;
 		}
 
-		if (distance_to_target < 0.04f)
+		if (distance_to_target < 0.025f)
 		{
 			target_speed = 0.0f;
 		}
@@ -533,6 +547,15 @@ void StartControlTask(void *argument)
 		{
 			left_velocity *= MAX_SPEED / max_velocity;
 			right_velocity *= MAX_SPEED / max_velocity;
+		}
+
+		if (returning)
+		{
+			Eigen::Vector2f endpoint{0.0f, 0.25f};
+			if ((endpoint - position).norm() < 0.1f && state == RobotMode::ROBOT_MODE_ENABLED)
+			{
+				commanded_function = RobotFunction::ROBOT_FUNCTION_DROPOFF;
+			}
 		}
 
 		// If the robot is close to the target, move to the next target
@@ -585,13 +608,34 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 		if (state == RobotMode::ROBOT_MODE_ENABLED)
 		{
 			// Delta heading
-			target_heading = normalizeAngle(target_heading + copysignf(3.0f * DEG_TO_RAD, last_direction ? 1.0f : -1.0f));
+			target_heading = normalizeAngle(target_heading + copysignf(6.0f * DEG_TO_RAD, last_direction ? 1.0f : -1.0f));
 		}
 	}
 	break;
 	case 0x05: // Set robot state
 	{
 		commanded_function = (RobotFunction)rx[0];
+
+		if (commanded_function == RobotFunction::ROBOT_FUNCTION_PICKUP)
+		{
+			// Next 4 bytes are the float value in IEEE 754 format
+			float dx = 0;
+			memcpy(&dx, &rx[0], 4);
+
+			// Next 4 bytes are the float value in IEEE 754 format
+			float dy = 0;
+			memcpy(&dy, &rx[4], 4);
+
+			float D = 0.1225f;
+			float O = 0.018f;
+
+			Eigen::Rotation2D rotation(robot.orientation[2]);
+
+			Eigen::Vector2f robot_position{robot.position[0], robot.position[1]};
+			Eigen::Vector2f camera_target_position{dx + O, dy + D};
+
+			lego_position = robot_position + rotation * camera_target_position;
+		}
 	}
 	break;
 	case 0x10: // New target position
@@ -611,9 +655,7 @@ void Process_RX_Data(uint8_t command, uint8_t *rx, uint8_t rx_count)
 		float D = 0.1225f;
 		float O = 0.018f;
 
-		float phi = robot.orientation[2];
-
-		Eigen::Rotation2D rotation(phi);
+		Eigen::Rotation2D rotation(robot.orientation[2]);
 
 		Eigen::Vector2f robot_position{robot.position[0], robot.position[1]};
 		Eigen::Vector2f camera_target_position{dx + O, dy + D};
@@ -807,7 +849,7 @@ void StartCommTask(void *argument)
 			if (state == RobotMode::ROBOT_MODE_ENABLED) // If the robot is enabled
 			{
 				state = RobotMode::ROBOT_MODE_PICKUP_TRANSITION;
-				pickup();
+				pickup(lego_position);
 				state = RobotMode::ROBOT_MODE_ENABLED;
 			}
 			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
@@ -819,7 +861,7 @@ void StartCommTask(void *argument)
 			{
 				state = RobotMode::ROBOT_MODE_DROPOFF_TRANSITION;
 				dropoff();
-				state = RobotMode::ROBOT_MODE_ENABLED;
+				state = RobotMode::ROBOT_MODE_DISABLED;
 			}
 			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
 		}
