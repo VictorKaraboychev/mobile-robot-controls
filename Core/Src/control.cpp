@@ -865,6 +865,7 @@ void StartCommTask(void *argument)
 			}
 			commanded_function = RobotFunction::ROBOT_FUNCTION_NONE;
 		}
+		break;
 		case RobotFunction::ROBOT_FUNCTION_LOAD:
 		{
 			// Load the tape
